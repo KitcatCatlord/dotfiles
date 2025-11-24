@@ -223,6 +223,9 @@ require("lazy").setup({
       require("fold-preview").setup()
     end
   },
+  {
+    "kkharji/sqlite.lua",
+  },
   -- DAP virtual text
   {
     "theHamsta/nvim-dap-virtual-text",
@@ -234,8 +237,9 @@ require("lazy").setup({
   -- markdown preview
   {
     "iamcco/markdown-preview.nvim",
-    build = "cd app && npm install",
-    ft = { "markdown" }
+    cmd = { "MarkdownPreviewToggle", "MarkdownPreview", "MarkdownPreviewStop" },
+    build = "cd app && yarn install",
+    ft = { "markdown" },
   },
 
   -- UFO folding
@@ -329,7 +333,6 @@ vim.lsp.enable({
   "omnisharp",
   "pyright"
 })
-
 vim.api.nvim_create_autocmd("BufWritePre",
   { pattern = "*.py", callback = function() vim.lsp.buf.format({ async = false }) end })
 
@@ -450,7 +453,12 @@ wk.add({
   { "<leader>tf", function() require("neotest").run.run(vim.fn.expand("%")) end, desc = "Run file tests" },
   { "<leader>to", function() require("neotest").output.open() end,               desc = "Test Output" },
   { "<leader>ts", function() require("neotest").summary.toggle() end,            desc = "Test Summary" },
-
+  -- SQL
+  { "<leader>q",  group = "Database" },
+  { "<leader>qo", "<cmd>DBUI<CR>",                                               desc = "Open DBUI" },
+  { "<leader>qc", "<cmd>DBUIClose<CR>",                                          desc = "Close DBUI" },
+  { "<leader>qr", "<cmd>DBUIRename<CR>",                                         desc = "Rename Connection" },
+  { "<leader>qs", "<cmd>DBUISaveQuery<CR>",                                      desc = "Save Query" },
   -- Markdown
   { "<leader>m",  group = "Markdown" },
   { "<leader>mp", "<cmd>MarkdownPreviewToggle<CR>",                              desc = "MD Preview" },
@@ -492,3 +500,25 @@ wk.add({
 vim.keymap.set("n", "<leader>fa", function()
   vim.lsp.buf.format({ async = true })
 end, { silent = true })
+
+vim.keymap.set("n", "<leader>qs", function()
+  require("telescope").extensions.sqlite.tables()
+end, { desc = "SQLite Tables" })
+
+vim.keymap.set("n", "<leader>qo", function() -- Old
+  local file = vim.fn.expand("%:p")
+  if file:match("%.sqlite$") or file:match("%.db$") then
+    require("sqlite").open(file)
+  else
+    vim.notify("Not a SQLite file", vim.log.levels.WARN)
+  end
+end, { desc = "Open SQLite DB" })
+
+vim.api.nvim_create_autocmd("BufRead", {
+  pattern = "*.sqlite",
+  callback = function()
+    pcall(function()
+      require("telescope").extensions.sqlite.tables()
+    end)
+  end,
+})
