@@ -54,10 +54,18 @@ require("lazy").setup({
     lazy = false,
     priority = 1000,
     config = function()
+      require("tokyonight").setup({
+        style = "moon",
+      })
       vim.cmd("colorscheme tokyonight")
-    end
-  },
 
+      vim.cmd("hi Normal guibg=#1a1b26")
+      vim.cmd("hi NormalFloat guibg=#1a1b26")
+      vim.cmd("hi SignColumn guibg=#1a1b26")
+      vim.cmd("hi LineNr guibg=#1a1b26")
+      vim.cmd("hi FoldColumn guibg=#1a1b26")
+    end,
+  },
   {
     "nvim-treesitter/nvim-treesitter",
     build = ":TSUpdate",
