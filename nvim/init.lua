@@ -28,15 +28,19 @@ require("lazy").setup({
   },
 
   {
-    "nvim-treesitter/nvim-treesitter",
+   "nvim-treesitter/nvim-treesitter",
     build = ":TSUpdate",
     opts = { ensure_installed = { "lua", "c", "cpp", "c_sharp", "json", "markdown", "bash", "python", "html", "javascript", "typescript", "css" }, highlight = { enable = true } },
     config = function(_, o) require("nvim-treesitter.configs").setup(o) end
   },
 
   { "nvim-treesitter/nvim-treesitter-context", config = function() require("treesitter-context").setup({}) end },
-  { "windwp/nvim-ts-autotag",                  config = function() require("nvim-ts-autotag").setup() end },
-
+  {
+    "windwp/nvim-ts-autotag",
+    config = function()
+      require("nvim-ts-autotag").setup()
+    end
+  },
   {
     "nvim-lualine/lualine.nvim",
     dependencies = { "nvim-tree/nvim-web-devicons" },
@@ -87,15 +91,15 @@ require("lazy").setup({
       require("todo-comments").setup({ keywords = { TODO = { icon = "" }, FIX = { icon = "" }, NOTE = { icon = "" }, NTS = { icon = "", color = "hint", alt = { "NOTICE", "NTS" } } } })
     end
   },
-  { "nvim-mini/mini.icons",    config = function() require("mini.icons").setup() end },
+  { "nvim-mini/mini.icons",                    config = function() require("mini.icons").setup() end },
 
-  { "stevearc/oil.nvim",       opts = { view_options = { show_hidden = true } } },
+  { "stevearc/oil.nvim",                       opts = { view_options = { show_hidden = true } } },
 
-  { "lewis6991/gitsigns.nvim", config = function() require("gitsigns").setup() end },
+  { "lewis6991/gitsigns.nvim",                 config = function() require("gitsigns").setup() end },
 
-  { "numToStr/Comment.nvim",   config = function() require("Comment").setup() end },
+  { "numToStr/Comment.nvim",                   config = function() require("Comment").setup() end },
 
-  { "windwp/nvim-autopairs",   config = function() require("nvim-autopairs").setup() end },
+  { "windwp/nvim-autopairs",                   config = function() require("nvim-autopairs").setup() end },
 
   {
     "kylechui/nvim-surround",
@@ -147,15 +151,31 @@ require("lazy").setup({
     end
   },
 
-  { "stevearc/overseer.nvim", config = function() require("overseer").setup() end },
   {
-    "akinsho/toggleterm.nvim",
-    version = "*",
+    "stevearc/overseer.nvim",
+    cmd = {
+      "OverseerOpen",
+      "OverseerRun",
+      "OverseerToggle",
+      "OverseerBuild",
+      "OverseerQuickAction",
+      "OverseerClearCache",
+    },
+    keys = {
+      { "<leader>tt", "<cmd>OverseerToggle<cr>", desc = "Tasks Panel" },
+      { "<leader>tr", "<cmd>OverseerRun<cr>",    desc = "Run current task" },
+    },
     config = function()
-      require(
-        "toggleterm").setup({ direction = "float" })
-    end
-  },
+      require("overseer").setup()
+    end,
+  }, {
+  "akinsho/toggleterm.nvim",
+  version = "*",
+  config = function()
+    require(
+      "toggleterm").setup({ direction = "float" })
+  end
+},
 
   { "mfussenegger/nvim-dap" },
   {
@@ -170,7 +190,7 @@ require("lazy").setup({
     end
   },
 
-  { "ThePrimeagen/refactoring.nvim",       config = function() require("refactoring").setup({}) end },
+  { "ThePrimeagen/refactoring.nvim", config = function() require("refactoring").setup({}) end },
 
   {
     "RRethy/vim-illuminate",
@@ -181,7 +201,7 @@ require("lazy").setup({
 
   { "NvChad/nvim-colorizer.lua",           config = function() require("colorizer").setup() end },
 
-  { "lukas-reineke/indent-blankline.nvim", main = "ibl",                                            opts = {} },
+  { "lukas-reineke/indent-blankline.nvim", main = "ibl",                                        opts = {} },
 
   {
     "folke/noice.nvim",
