@@ -19,6 +19,37 @@ vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
   {
+    "nvim-tree/nvim-tree.lua",
+    dependencies = { "nvim-tree/nvim-web-devicons" },
+    config = function()
+      require("nvim-tree").setup({
+        view = {
+          width = 35,
+        },
+        renderer = {
+          highlight_git = true,
+          icons = {
+            show = {
+              file = true,
+              folder = true,
+              folder_arrow = true,
+              git = true,
+            },
+          },
+        },
+        filters = {
+          dotfiles = false,
+        },
+        git = {
+          enable = true,
+        },
+      })
+
+      -- Keybind (optional)
+      vim.keymap.set("n", "<leader>nt", "<cmd>NvimTreeToggle<CR>", { silent = true })
+    end
+  },
+  {
     "folke/tokyonight.nvim",
     lazy = false,
     priority = 1000,
@@ -28,7 +59,7 @@ require("lazy").setup({
   },
 
   {
-   "nvim-treesitter/nvim-treesitter",
+    "nvim-treesitter/nvim-treesitter",
     build = ":TSUpdate",
     opts = { ensure_installed = { "lua", "c", "cpp", "c_sharp", "json", "markdown", "bash", "python", "html", "javascript", "typescript", "css" }, highlight = { enable = true } },
     config = function(_, o) require("nvim-treesitter.configs").setup(o) end
