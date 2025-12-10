@@ -1,583 +1,711 @@
+-- Set leader and general options
 vim.g.mapleader = " "
 vim.opt.termguicolors = true
 vim.opt.number = true
 vim.opt.relativenumber = true
 vim.opt.cursorline = true
 vim.opt.expandtab = true
-vim.opt.shiftwidth = 2
-vim.opt.tabstop = 2
+vim.opt.shiftwidth = 4
+vim.opt.tabstop = 4
 vim.opt.signcolumn = "yes"
 vim.opt.scrolloff = 6
+vim.opt.softtabstop = 4
+-- Faster update time for diagnostics
 vim.opt.updatetime = 200 -- NTS: Extra addition
 
+-- lazy.nvim bootstrap
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
 if not vim.loop.fs_stat(lazypath) then
-  vim.fn.system({ "git", "clone", "--filter=blob:none", "https://github.com/folke/lazy.nvim.git", "--branch=stable",
-    lazypath })
+    vim.fn.system({
+        "git",
+        "clone",
+        "--filter=blob:none",
+        "https://github.com/folke/lazy.nvim.git",
+        "--branch=stable",
+        lazypath,
+    })
 end
 vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
-  {
-    "nvim-tree/nvim-tree.lua",
-    dependencies = { "nvim-tree/nvim-web-devicons" },
-    config = function()
-      require("nvim-tree").setup({
-        view = {
-          width = 35,
-        },
-        renderer = {
-          highlight_git = true,
-          icons = {
-            show = {
-              file = true,
-              folder = true,
-              folder_arrow = true,
-              git = true,
-            },
-          },
-        },
-        filters = {
-          dotfiles = false,
-        },
-        git = {
-          enable = true,
-        },
-      })
-
-      -- Keybind (optional)
-      vim.keymap.set("n", "<leader>nt", "<cmd>NvimTreeToggle<CR>", { silent = true })
-    end
-  },
-  {
-    "folke/tokyonight.nvim",
-    lazy = false,
-    priority = 1000,
-    config = function()
-      require("tokyonight").setup({
-        style = "moon",
-      })
-      vim.cmd("colorscheme tokyonight")
-
-      vim.cmd("hi Normal guibg=#1a1b26")
-      vim.cmd("hi NormalFloat guibg=#1a1b26")
-      vim.cmd("hi SignColumn guibg=#1a1b26")
-      vim.cmd("hi LineNr guibg=#1a1b26")
-      vim.cmd("hi FoldColumn guibg=#1a1b26")
-    end,
-  },
-  {
-    "nvim-treesitter/nvim-treesitter",
-    build = ":TSUpdate",
-    opts = { ensure_installed = { "lua", "c", "cpp", "c_sharp", "json", "markdown", "bash", "python", "html", "javascript", "typescript", "css" }, highlight = { enable = true } },
-    config = function(_, o) require("nvim-treesitter.configs").setup(o) end
-  },
-
-  { "nvim-treesitter/nvim-treesitter-context", config = function() require("treesitter-context").setup({}) end },
-  {
-    "windwp/nvim-ts-autotag",
-    config = function()
-      require("nvim-ts-autotag").setup()
-    end
-  },
-  {
-    "nvim-lualine/lualine.nvim",
-    dependencies = { "nvim-tree/nvim-web-devicons" },
-    config = function()
-      require("lualine").setup({ options = { theme = "tokyonight" } })
-    end
-  },
-
-  {
-    "akinsho/bufferline.nvim",
-    version = "*",
-    dependencies = { "nvim-tree/nvim-web-devicons" },
-    config = function()
-      require("bufferline").setup({
-        options = {
-          diagnostics = "nvim_lsp",
-          diagnostics_indicator = function(count, level)
-            local icon = level:match("error") and " " or " "; return " " .. icon .. count
-          end,
-        }
-      })
-    end
-  },
-
-  {
-    "nvim-telescope/telescope.nvim",
-    branch = "0.1.x",
-    dependencies = {
-      "nvim-lua/plenary.nvim",
-      "nvim-telescope/telescope-ui-select.nvim",
-      { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
+    -- File explorer
+    {
+        "nvim-tree/nvim-tree.lua",
+        dependencies = { "nvim-tree/nvim-web-devicons" },
+        config = function()
+            require("nvim-tree").setup({
+                -- Use on_attach to customise key mappings when the tree is focused
+                on_attach = function(bufnr)
+                    local api = require("nvim-tree.api")
+                    local function opts(desc)
+                        return { desc = "nvim-tree: " .. desc, buffer = bufnr, noremap = true, silent = true, nowait = true }
+                    end
+                    -- load default mappings then add our own
+                    api.config.mappings.default_on_attach(bufnr)
+                    -- Open the selected file in a new tab when pressing 't'
+                    vim.keymap.set("n", "t", api.node.open.tab, opts("Open in new tab"))
+                end,
+                view = {
+                    width = 35,
+                },
+                renderer = {
+                    highlight_git = true,
+                    icons = {
+                        show = {
+                            file = true,
+                            folder = true,
+                            folder_arrow = true,
+                            git = true,
+                        },
+                    },
+                },
+                filters = {
+                    dotfiles = false,
+                },
+                git = {
+                    enable = true,
+                },
+                -- do not automatically sync the tree across tabs
+                tab = {
+                    sync = {
+                        open = false,
+                        close = false,
+                    },
+                },
+            })
+            -- Leader key mapping for toggling the tree
+            vim.keymap.set("n", "<leader>nt", "<cmd>NvimTreeToggle<CR>", { silent = true, desc = "Toggle Nvim Tree" })
+        end,
     },
-    config = function()
-      local t = require("telescope")
-      t.setup({
-        defaults = { sorting_strategy = "ascending", layout_config = { prompt_position = "top" } },
-        extensions = { ["ui-select"] = {}, fzf = { fuzzy = true, case_mode = "smart_case" } }
-      })
-      t.load_extension("ui-select")
-      pcall(t.load_extension, "fzf")
-    end
-  },
+    {
+        "folke/tokyonight.nvim",
+        lazy = false,
+        priority = 1000,
+        config = function()
+            require("tokyonight").setup({
+                style = "moon",
+            })
+            vim.cmd("colorscheme tokyonight")
+            vim.cmd("hi Normal guibg=#1a1b26")
+            vim.cmd("hi NormalFloat guibg=#1a1b26")
+            vim.cmd("hi SignColumn guibg=#1a1b26")
+            vim.cmd("hi LineNr guibg=#1a1b26")
+            vim.cmd("hi FoldColumn guibg=#1a1b26")
+        end,
+    },
+    {
+        "nvim-treesitter/nvim-treesitter",
+        build = ":TSUpdate",
+        opts = {
+            ensure_installed = {
+                "lua",
+                "c",
+                "cpp",
+                "c_sharp",
+                "json",
+                "markdown",
+                "bash",
+                "python",
+                "html",
+                "javascript",
+                "typescript",
+                "css",
+            },
+            highlight = { enable = true },
+        },
+        config = function(_, o)
+            require("nvim-treesitter.configs").setup(o)
+        end,
+    },
+    { "nvim-treesitter/nvim-treesitter-context", config = function() require("treesitter-context").setup({}) end },
+    { "windwp/nvim-ts-autotag",                  config = function() require("nvim-ts-autotag").setup() end },
+    {
+        "nvim-lualine/lualine.nvim",
+        dependencies = { "nvim-tree/nvim-web-devicons" },
+        config = function()
+            require("lualine").setup({ options = { theme = "tokyonight" } })
+        end,
+    },
+    {
+        "akinsho/bufferline.nvim",
+        version = "*",
+        dependencies = { "nvim-tree/nvim-web-devicons" },
+        config = function()
+            require("bufferline").setup({
+                options = {
+                    mode = "tabs",
+                    diagnostics = "nvim_lsp",
+                    diagnostics_indicator = function(count, level)
+                        local icon = level:match("error") and " " or " "
+                        return " " .. icon .. count
+                    end,
+                },
+            })
+        end,
+    },
+    {
+        "nvim-telescope/telescope.nvim",
+        branch = "0.1.x",
+        dependencies = {
+            "nvim-lua/plenary.nvim",
+            "nvim-telescope/telescope-ui-select.nvim",
+            { "nvim-telescope/telescope-fzf-native.nvim", build = "make" },
+        },
+        config = function()
+            local t = require("telescope")
+            local actions = require("telescope.actions")
+            local action_state = require("telescope.actions.state")
 
-  {
+            local open_in_tab = function(prompt_bufnr)
+                local entry = action_state.get_selected_entry()
+                actions.close(prompt_bufnr)
+                vim.cmd("tabnew " .. entry.path)
+            end
+
+            t.setup({
+                defaults = {
+                    sorting_strategy = "ascending",
+                    layout_config = { prompt_position = "top" },
+                    mappings = {
+                        i = {
+                            ["<CR>"] = open_in_tab, -- Enter in insert mode
+                        },
+                        n = {
+                            ["<CR>"] = open_in_tab, -- Enter in normal mode
+                        },
+                    },
+                },
+                extensions = {
+                    ["ui-select"] = {},
+                    fzf = { fuzzy = true, case_mode = "smart_case" },
+                },
+            })
+
+            t.load_extension("ui-select")
+            pcall(t.load_extension, "fzf")
+        end,
+    }, {
     "folke/todo-comments.nvim",
     dependencies = { "nvim-lua/plenary.nvim" },
     config = function()
-      require("todo-comments").setup({ keywords = { TODO = { icon = "" }, FIX = { icon = "" }, NOTE = { icon = "" }, NTS = { icon = "", color = "hint", alt = { "NOTICE", "NTS" } } } })
-    end
-  },
-  { "nvim-mini/mini.icons",                    config = function() require("mini.icons").setup() end },
-
-  { "stevearc/oil.nvim",                       opts = { view_options = { show_hidden = true } } },
-
-  { "lewis6991/gitsigns.nvim",                 config = function() require("gitsigns").setup() end },
-
-  { "numToStr/Comment.nvim",                   config = function() require("Comment").setup() end },
-
-  { "windwp/nvim-autopairs",                   config = function() require("nvim-autopairs").setup() end },
-
-  {
-    "kylechui/nvim-surround",
-    version = "*",
-    config = function()
-      require(
-        "nvim-surround").setup()
-    end
-  },
-
-  { "folke/which-key.nvim",        config = function() require("which-key").setup() end },
-
-  {
-    "folke/trouble.nvim",
-    dependencies = { "nvim-tree/nvim-web-devicons" },
-    config = function()
-      require(
-        "trouble").setup()
-    end
-  },
-
-  { "aznhe21/actions-preview.nvim" },
-
-  { "williamboman/mason.nvim",     config = function() require("mason").setup() end },
-
-  {
-    "williamboman/mason-lspconfig.nvim",
-    dependencies = { "neovim/nvim-lspconfig" },
-    config = function()
-      require("mason-lspconfig").setup({ ensure_installed = { "lua_ls", "clangd", "omnisharp", "pyright" } })
-    end
-  },
-
-  {
-    "hrsh7th/nvim-cmp",
-    dependencies = { "hrsh7th/cmp-nvim-lsp", "hrsh7th/cmp-buffer", "hrsh7th/cmp-path", "hrsh7th/cmp-cmdline", "L3MON4D3/LuaSnip", "saadparwaiz1/cmp_luasnip", "rafamadriz/friendly-snippets" },
-    config = function()
-      local cmp = require("cmp")
-      require("luasnip.loaders.from_vscode").lazy_load()
-      cmp.setup({
-        snippet = { expand = function(args) require("luasnip").lsp_expand(args.body) end },
-        mapping = cmp.mapping.preset.insert({
-          ["<Tab>"] = cmp.mapping.select_next_item(),
-          ["<S-Tab>"] = cmp.mapping.select_prev_item(),
-          ["<CR>"] = cmp.mapping.confirm({ select = true }),
-        }),
-        sources = cmp.config.sources({ { name = "nvim_lsp" }, { name = "luasnip" }, { name = "path" }, { name = "buffer" } }),
-      })
-    end
-  },
-
-  {
-    "stevearc/overseer.nvim",
-    cmd = {
-      "OverseerOpen",
-      "OverseerRun",
-      "OverseerToggle",
-      "OverseerBuild",
-      "OverseerQuickAction",
-      "OverseerClearCache",
-    },
-    keys = {
-      { "<leader>tt", "<cmd>OverseerToggle<cr>", desc = "Tasks Panel" },
-      { "<leader>tr", "<cmd>OverseerRun<cr>",    desc = "Run current task" },
-    },
-    config = function()
-      require("overseer").setup()
+        require("todo-comments").setup({
+            keywords = {
+                TODO = { icon = "" },
+                FIX = { icon = "" },
+                NOTE = { icon = "" },
+                NTS = { icon = "", color = "hint", alt = { "NOTICE", "NTS" } },
+            },
+        })
     end,
-  }, {
-  "akinsho/toggleterm.nvim",
-  version = "*",
-  config = function()
-    require(
-      "toggleterm").setup({ direction = "float" })
-  end
 },
-
-  { "mfussenegger/nvim-dap" },
-  {
-    "rcarriga/nvim-dap-ui",
-    dependencies = { "mfussenegger/nvim-dap", "nvim-neotest/nvim-nio" },
-    config = function()
-      local dap, dapui = require("dap"), require("dapui")
-      dapui.setup()
-      dap.listeners.after.event_initialized["dapui_config"] = function() dapui.open() end
-      dap.listeners.before.event_terminated["dapui_config"] = function() dapui.close() end
-      dap.listeners.before.event_exited["dapui_config"] = function() dapui.close() end
-    end
-  },
-
-  { "ThePrimeagen/refactoring.nvim", config = function() require("refactoring").setup({}) end },
-
-  {
-    "RRethy/vim-illuminate",
-    config = function()
-      require("illuminate").configure({ providers = { "lsp", "treesitter", "regex" }, delay = 120 })
-    end
-  },
-
-  { "NvChad/nvim-colorizer.lua",           config = function() require("colorizer").setup() end },
-
-  { "lukas-reineke/indent-blankline.nvim", main = "ibl",                                        opts = {} },
-
-  {
-    "folke/noice.nvim",
-    dependencies = { "MunifTanjim/nui.nvim", "rcarriga/nvim-notify" },
-    config = function()
-      require("notify").setup({})
-      require("noice").setup({ lsp = { progress = { enabled = true } } })
-      vim.notify = require("notify")
-    end
-  },
-
-  { "folke/neodev.nvim",      config = function() require("neodev").setup() end },
-
-  { "goolord/alpha-nvim",     config = function() require("alpha").setup(require("alpha.themes.startify").config) end },
-
-  { "folke/persistence.nvim", config = function() require("persistence").setup() end },
-
-  {
-    "theprimeagen/harpoon",
-    branch = "harpoon2",
-    dependencies = { "nvim-lua/plenary.nvim" },
-    config = function()
-      require("harpoon"):setup({})
-    end
-  },
-
-  {
-    "tomasky/bookmarks.nvim",
-    dependencies = { "nvim-telescope/telescope.nvim" },
-    config = function()
-      require("bookmarks").setup({})
-    end
-  },
-
-  {
-    "anuvyklack/fold-preview.nvim",
-    dependencies = { "anuvyklack/keymap-amend.nvim" },
-    config = function()
-      require("fold-preview").setup()
-    end
-  },
-  {
-    "kkharji/sqlite.lua",
-  },
-  -- DAP virtual text
-  {
-    "theHamsta/nvim-dap-virtual-text",
-    config = function()
-      require("nvim-dap-virtual-text").setup()
-    end
-  },
-
-  -- markdown preview
-  {
-    "iamcco/markdown-preview.nvim",
-    cmd = { "MarkdownPreviewToggle", "MarkdownPreview", "MarkdownPreviewStop" },
-    build = "cd app && yarn install",
-    ft = { "markdown" },
-  },
-
-  -- UFO folding
-  {
-    "kevinhwang91/nvim-ufo",
-    dependencies = { "kevinhwang91/promise-async" },
-    config = function()
-      require("ufo").setup()
-      vim.o.foldcolumn = "1"
-      vim.o.foldlevel = 99
-      vim.o.foldlevelstart = 99
-      vim.o.foldenable = true
-    end
-  },
-
-  -- neotest
-  {
-    "nvim-neotest/neotest",
-    dependencies = {
-      "nvim-lua/plenary.nvim",
-      "nvim-treesitter/nvim-treesitter",
-      "nvim-neotest/nvim-nio",
-      "nvim-neotest/neotest-python",
-      "Issafalcon/neotest-dotnet"
+    { "nvim-mini/mini.icons",    config = function() require("mini.icons").setup() end },
+    { "stevearc/oil.nvim",       opts = { view_options = { show_hidden = true } } },
+    { "lewis6991/gitsigns.nvim", config = function() require("gitsigns").setup() end },
+    { "numToStr/Comment.nvim",   config = function() require("Comment").setup() end },
+    { "windwp/nvim-autopairs",   config = function() require("nvim-autopairs").setup() end },
+    {
+        "kylechui/nvim-surround",
+        version = "*",
+        config = function()
+            require("nvim-surround").setup()
+        end,
     },
-    config = function()
-      require("neotest").setup({
-        adapters = {
-          require("neotest-python")({}),
-          require("neotest-dotnet")({})
-        }
-      })
-    end
-  },
-
-  -- ThePrimeagen's vim-be-good
-  { "ThePrimeagen/vim-be-good" },
-
-  {
-    "karb94/neoscroll.nvim",
-    config = function()
-      local neoscroll = require("neoscroll")
-      neoscroll.setup({
-        hide_cursor = true,
-        performance_mode = true,
-      })
-
-      local mappings = {
-        ["<C-y>"] = function() neoscroll.scroll(-1, { move_cursor = false, duration = 50 }) end,
-        ["<C-e>"] = function() neoscroll.scroll(1, { move_cursor = false, duration = 50 }) end,
-      }
-
-      for key, fn in pairs(mappings) do
-        vim.keymap.set({ "n", "v", "x" }, key, fn, { silent = true })
-      end
-    end
-  },
+    { "folke/which-key.nvim",        config = function() require("which-key").setup() end },
+    {
+        "folke/trouble.nvim",
+        dependencies = { "nvim-tree/nvim-web-devicons" },
+        config = function()
+            require("trouble").setup()
+        end,
+    },
+    { "aznhe21/actions-preview.nvim" },
+    { "williamboman/mason.nvim",     config = function() require("mason").setup() end },
+    {
+        "williamboman/mason-lspconfig.nvim",
+        dependencies = { "neovim/nvim-lspconfig" },
+        config = function()
+            require("mason-lspconfig").setup({ ensure_installed = { "lua_ls", "clangd", "omnisharp", "pyright" } })
+        end,
+    },
+    {
+        "hrsh7th/nvim-cmp",
+        dependencies = {
+            "hrsh7th/cmp-nvim-lsp",
+            "hrsh7th/cmp-buffer",
+            "hrsh7th/cmp-path",
+            "hrsh7th/cmp-cmdline",
+            "L3MON4D3/LuaSnip",
+            "saadparwaiz1/cmp_luasnip",
+            "rafamadriz/friendly-snippets",
+        },
+        config = function()
+            local cmp = require("cmp")
+            require("luasnip.loaders.from_vscode").lazy_load()
+            cmp.setup({
+                snippet = {
+                    expand = function(args)
+                        require("luasnip").lsp_expand(args.body)
+                    end,
+                },
+                mapping = cmp.mapping.preset.insert({
+                    ["<Tab>"] = cmp.mapping.select_next_item(),
+                    ["<S-Tab>"] = cmp.mapping.select_prev_item(),
+                    ["<CR>"] = cmp.mapping.confirm({ select = true }),
+                }),
+                sources = cmp.config.sources({
+                    { name = "nvim_lsp" },
+                    { name = "luasnip" },
+                    { name = "path" },
+                    { name = "buffer" },
+                }),
+            })
+        end,
+    },
+    {
+        "stevearc/overseer.nvim",
+        cmd = {
+            "OverseerOpen",
+            "OverseerRun",
+            "OverseerToggle",
+            "OverseerBuild",
+            "OverseerQuickAction",
+            "OverseerClearCache",
+        },
+        -- no plugin‑level key mappings here; global keymaps handle overseer commands
+        config = function()
+            require("overseer").setup()
+        end,
+    },
+    {
+        "akinsho/toggleterm.nvim",
+        version = "*",
+        config = function()
+            require("toggleterm").setup({ direction = "float" })
+        end,
+    },
+    { "mfussenegger/nvim-dap" },
+    {
+        "rcarriga/nvim-dap-ui",
+        dependencies = { "mfussenegger/nvim-dap", "nvim-neotest/nvim-nio" },
+        config = function()
+            local dap, dapui = require("dap"), require("dapui")
+            dapui.setup()
+            dap.listeners.after.event_initialized["dapui_config"] = function() dapui.open() end
+            dap.listeners.before.event_terminated["dapui_config"] = function() dapui.close() end
+            dap.listeners.before.event_exited["dapui_config"] = function() dapui.close() end
+        end,
+    },
+    { "ThePrimeagen/refactoring.nvim", config = function() require("refactoring").setup({}) end },
+    {
+        "RRethy/vim-illuminate",
+        config = function()
+            require("illuminate").configure({ providers = { "lsp", "treesitter", "regex" }, delay = 120 })
+        end,
+    },
+    { "NvChad/nvim-colorizer.lua",           config = function() require("colorizer").setup() end },
+    { "lukas-reineke/indent-blankline.nvim", main = "ibl",                                        opts = {} },
+    {
+        "folke/noice.nvim",
+        dependencies = { "MunifTanjim/nui.nvim", "rcarriga/nvim-notify" },
+        config = function()
+            require("notify").setup({})
+            require("noice").setup({ lsp = { progress = { enabled = true } } })
+            vim.notify = require("notify")
+        end,
+    },
+    { "folke/neodev.nvim",      config = function() require("neodev").setup() end },
+    { "goolord/alpha-nvim",     config = function() require("alpha").setup(require("alpha.themes.startify").config) end },
+    { "folke/persistence.nvim", config = function() require("persistence").setup() end },
+    {
+        "theprimeagen/harpoon",
+        branch = "harpoon2",
+        dependencies = { "nvim-lua/plenary.nvim" },
+        config = function()
+            require("harpoon"):setup({})
+        end,
+    },
+    {
+        "tomasky/bookmarks.nvim",
+        dependencies = { "nvim-telescope/telescope.nvim" },
+        config = function()
+            require("bookmarks").setup({})
+        end,
+    },
+    {
+        "anuvyklack/fold-preview.nvim",
+        dependencies = { "anuvyklack/keymap-amend.nvim" },
+        config = function()
+            require("fold-preview").setup()
+        end,
+    },
+    {
+        "kkharji/sqlite.lua",
+    },
+    -- DAP virtual text
+    {
+        "theHamsta/nvim-dap-virtual-text",
+        config = function()
+            require("nvim-dap-virtual-text").setup()
+        end,
+    },
+    -- markdown preview
+    {
+        "iamcco/markdown-preview.nvim",
+        cmd = { "MarkdownPreviewToggle", "MarkdownPreview", "MarkdownPreviewStop" },
+        build = "cd app && yarn install",
+        ft = { "markdown" },
+    },
+    -- UFO folding
+    {
+        "kevinhwang91/nvim-ufo",
+        dependencies = { "kevinhwang91/promise-async" },
+        config = function()
+            require("ufo").setup()
+            vim.o.foldcolumn = "1"
+            vim.o.foldlevel = 99
+            vim.o.foldlevelstart = 99
+            vim.o.foldenable = true
+        end,
+    },
+    -- neotest
+    {
+        "nvim-neotest/neotest",
+        dependencies = {
+            "nvim-lua/plenary.nvim",
+            "nvim-treesitter/nvim-treesitter",
+            "nvim-neotest/nvim-nio",
+            "nvim-neotest/neotest-python",
+            "Issafalcon/neotest-dotnet",
+        },
+        config = function()
+            require("neotest").setup({ adapters = { require("neotest-python")({}), require("neotest-dotnet")({}) } })
+        end,
+    },
+    -- ThePrimeagen's vim-be-good
+    { "ThePrimeagen/vim-be-good" },
+    {
+        "karb94/neoscroll.nvim",
+        config = function()
+            local neoscroll = require("neoscroll")
+            neoscroll.setup({
+                hide_cursor = true,
+                performance_mode = true,
+            })
+            local mappings = {
+                ["<C-y>"] = function() neoscroll.scroll(-1, { move_cursor = false, duration = 50 }) end,
+                ["<C-e>"] = function() neoscroll.scroll(1, { move_cursor = false, duration = 50 }) end,
+            }
+            for key, fn in pairs(mappings) do
+                vim.keymap.set({ "n", "v", "x" }, key, fn, { silent = true })
+            end
+        end,
+    },
+    -- Database UI for vim-dadbod
+    {
+        "kristijanhusak/vim-dadbod-ui",
+        dependencies = {
+            { "tpope/vim-dadbod",                     lazy = true },
+            { "kristijanhusak/vim-dadbod-completion", ft = { "sql", "mysql", "plsql" }, lazy = true },
+        },
+        cmd = { "DBUI", "DBUIToggle", "DBUIAddConnection", "DBUIFindBuffer" },
+        init = function()
+            -- use nerd fonts for nice icons in DBUI
+            vim.g.db_ui_use_nerd_fonts = 1
+        end,
+    },
+    -- Code runner to execute files in an integrated terminal
+    {
+        "CRAG666/code_runner.nvim",
+        dependencies = { "nvim-lua/plenary.nvim", "akinsho/toggleterm.nvim" },
+        config = function()
+            local lspconfig = require("lspconfig")
+            require("code_runner").setup({
+                mode = "toggleterm",
+                focus = true,
+                startinsert = false,
+                filetype = {
+                    c = "cd $dir && gcc $fileName -o /tmp/$fileNameWithoutExt && /tmp/$fileNameWithoutExt",
+                    cpp = "cd $dir && g++ $fileName -o /tmp/$fileNameWithoutExt && /tmp/$fileNameWithoutExt",
+                    cs = function()
+                        -- find the nearest csproj to run dotnet project
+                        local root_dir = lspconfig.util.root_pattern("*.csproj")(vim.fn.getcwd())
+                        return "cd " .. (root_dir or "$dir") .. " && dotnet run$end"
+                    end,
+                    python = "python3 -u",
+                    lua = "lua",
+                    bash = "bash",
+                    sh = "bash",
+                    javascript = "node",
+                    typescript = "ts-node",
+                    java = { "cd $dir &&", "javac $fileName &&", "java $fileNameWithoutExt" },
+                    rust = function()
+                        -- Use cargo run if Cargo.toml exists, otherwise compile manually
+                        local cargo_toml = vim.fn.findfile("Cargo.toml", ".;")
+                        if cargo_toml ~= "" then
+                            return "cd $dir && cargo run"
+                        else
+                            return "cd $dir && rustc $fileName && $dir/$fileNameWithoutExt"
+                        end
+                    end,
+                },
+            })
+            -- keymaps for code runner
+            vim.keymap.set("n", "<leader>rr", ":RunCode<CR>", { desc = "Run Code" })
+            vim.keymap.set("n", "<leader>rf", ":RunFile<CR>", { desc = "Run File" })
+            vim.keymap.set("n", "<leader>rp", ":RunProject<CR>", { desc = "Run Project" })
+            vim.keymap.set("n", "<leader>rc", ":RunClose<CR>", { desc = "Close Runner" })
+        end,
+    },
 })
 
+-- LSP and diagnostics configuration
 local cmp_caps = require("cmp_nvim_lsp").default_capabilities()
 
 vim.diagnostic.config({
-  virtual_text = true,
-  signs = true,
-  underline = true,
+    virtual_text = true,
+    signs = true,
+    underline = true,
 })
 
 local pid = vim.fn.getpid()
 
 vim.lsp.config["lua_ls"] = {
-  capabilities = cmp_caps,
-  settings = { Lua = { diagnostics = { globals = { "vim" } } } }
+    capabilities = cmp_caps,
+    settings = { Lua = { diagnostics = { globals = { "vim" } } } },
 }
-
-vim.lsp.config["clangd"] = {
-  capabilities = cmp_caps
-}
-
-vim.lsp.config["pyright"] = {
-  capabilities = cmp_caps
-}
-
+vim.lsp.config["clangd"] = { capabilities = cmp_caps }
+vim.lsp.config["pyright"] = { capabilities = cmp_caps }
 vim.lsp.config["omnisharp"] = {
-  capabilities = cmp_caps,
-  cmd = { "omnisharp", "--languageserver", "--hostPID", tostring(pid) }
+    capabilities = cmp_caps,
+    cmd = { "omnisharp", "--languageserver", "--hostPID", tostring(pid) },
 }
 
-vim.lsp.enable({
-  "lua_ls",
-  "clangd",
-  "omnisharp",
-  "pyright"
+vim.lsp.enable({ "lua_ls", "clangd", "omnisharp", "pyright" })
+
+vim.api.nvim_create_autocmd("BufWritePre", {
+    pattern = "*.py",
+    callback = function()
+        vim.lsp.buf.format({ async = false })
+    end,
 })
-vim.api.nvim_create_autocmd("BufWritePre",
-  { pattern = "*.py", callback = function() vim.lsp.buf.format({ async = false }) end })
 
-vim.keymap.set("n", "<leader>e", require("oil").open, { silent = true })
-vim.keymap.set("n", "<leader>ff", function() require("telescope.builtin").find_files() end, { silent = true })
-vim.keymap.set("n", "<leader>fg", function() require("telescope.builtin").live_grep() end, { silent = true })
-vim.keymap.set("n", "<leader>fb", function() require("telescope.builtin").buffers() end, { silent = true })
-vim.keymap.set("n", "<leader>fh", function() require("telescope.builtin").help_tags() end, { silent = true })
-vim.keymap.set("n", "<leader>ft", ":TodoTelescope<CR>", { silent = true })
--- redundant vim.keymap.set("n", "<leader>fd", function() require("telescope.builtin").diagnostics() end, { silent = true })
+-- Keymaps with descriptions to populate which‑key
+-- File explorers
+vim.keymap.set("n", "<leader>e", function() require("oil").open() end, { silent = true, desc = "File Explorer (Oil)" })
+-- nvim-tree toggle keymap is defined within the plugin setup, so avoid duplicating it here
 
-vim.keymap.set({ "n", "v" }, "<leader>ca", function() require("actions-preview").code_actions() end, { silent = true })
+-- Telescope finders
+vim.keymap.set("n", "<leader>ff", function() require("telescope.builtin").find_files() end,
+    { silent = true, desc = "Find Files" })
+vim.keymap.set("n", "<leader>fg", function() require("telescope.builtin").live_grep() end,
+    { silent = true, desc = "Grep Text" })
+vim.keymap.set("n", "<leader>fb", function() require("telescope.builtin").buffers() end,
+    { silent = true, desc = "Find Buffers" })
+vim.keymap.set("n", "<leader>fh", function() require("telescope.builtin").help_tags() end,
+    { silent = true, desc = "Help Tags" })
+vim.keymap.set("n", "<leader>ft", "<cmd>TodoTelescope<CR>", { silent = true, desc = "TODOs" })
 
-vim.keymap.set("n", "gd", vim.lsp.buf.definition, { silent = true })
-vim.keymap.set("n", "gr", vim.lsp.buf.references, { silent = true })
-vim.keymap.set("n", "gi", vim.lsp.buf.implementation, { silent = true })
-vim.keymap.set("n", "K", vim.lsp.buf.hover, { silent = true })
-vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, { silent = true })
-vim.keymap.set("n", "<leader>sd", "<cmd>Trouble diagnostics toggle<cr>", { silent = true })
+-- Code actions
+vim.keymap.set({ "n", "v" }, "<leader>ca", function() require("actions-preview").code_actions() end,
+    { silent = true, desc = "Code Action" })
 
-vim.keymap.set("n", "<leader>tt", "<cmd>OverseerToggle<cr>", { silent = true })
-vim.keymap.set("n", "<leader>tr", "<cmd>OverseerRun<cr>", { silent = true })
-vim.keymap.set("n", "<leader>tv", "<cmd>ToggleTerm<cr>", { silent = true })
+-- LSP navigation
+vim.keymap.set("n", "gd", vim.lsp.buf.definition, { silent = true, desc = "Go to Definition" })
+vim.keymap.set("n", "gr", vim.lsp.buf.references, { silent = true, desc = "References" })
+vim.keymap.set("n", "gi", vim.lsp.buf.implementation, { silent = true, desc = "Go to Implementation" })
+vim.keymap.set("n", "K", vim.lsp.buf.hover, { silent = true, desc = "Hover Info" })
+vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, { silent = true, desc = "Rename Symbol" })
+vim.keymap.set("n", "<leader>sd", "<cmd>Trouble diagnostics toggle<cr>", { silent = true, desc = "Diagnostics List" })
 
+-- Overseer tasks & Terminal toggle
+vim.keymap.set("n", "<leader>tt", "<cmd>OverseerToggle<cr>", { silent = true, desc = "Tasks Panel" })
+vim.keymap.set("n", "<leader>tr", "<cmd>OverseerRun<cr>", { silent = true, desc = "Run Task" })
+vim.keymap.set("n", "<leader>tv", "<cmd>ToggleTerm<cr>", { silent = true, desc = "Terminal" })
+
+-- Debugging (DAP)
 local dap = require("dap")
-vim.keymap.set("n", "<F5>", dap.continue)
-vim.keymap.set("n", "<F10>", dap.step_over)
-vim.keymap.set("n", "<F11>", dap.step_into)
-vim.keymap.set("n", "<F12>", dap.step_out)
-vim.keymap.set("n", "<leader>db", dap.toggle_breakpoint)
+vim.keymap.set("n", "<F5>", dap.continue, { desc = "Debug Continue" })
+vim.keymap.set("n", "<F10>", dap.step_over, { desc = "Debug Step Over" })
+vim.keymap.set("n", "<F11>", dap.step_into, { desc = "Debug Step Into" })
+vim.keymap.set("n", "<F12>", dap.step_out, { desc = "Debug Step Out" })
+vim.keymap.set("n", "<leader>db", dap.toggle_breakpoint, { desc = "Toggle Breakpoint" })
 
-vim.keymap.set({ "n", "x" }, "<leader>re", function() require("refactoring").refactor("Extract Function") end)
-vim.keymap.set({ "n", "x" }, "<leader>ri", function() require("refactoring").refactor("Inline Variable") end)
+-- Refactoring
+vim.keymap.set({ "n", "x" }, "<leader>re", function() require("refactoring").refactor("Extract Function") end,
+    { desc = "Extract Function" })
+vim.keymap.set({ "n", "x" }, "<leader>ri", function() require("refactoring").refactor("Inline Variable") end,
+    { desc = "Inline Variable" })
 
-vim.keymap.set("n", "<leader>ha", function() require("harpoon"):list():add() end)
-vim.keymap.set("n", "<leader>hm", function() require("harpoon").ui:toggle_quick_menu(require("harpoon"):list()) end)
-vim.keymap.set("n", "<leader>h1", function() require("harpoon"):list():select(1) end)
-vim.keymap.set("n", "<leader>h2", function() require("harpoon"):list():select(2) end)
-vim.keymap.set("n", "<leader>h3", function() require("harpoon"):list():select(3) end)
-vim.keymap.set("n", "<leader>h4", function() require("harpoon"):list():select(4) end)
+-- Harpoon shortcuts
+vim.keymap.set("n", "<leader>ha", function() require("harpoon"):list():add() end, { desc = "Harpoon Add File" })
+vim.keymap.set("n", "<leader>hm", function() require("harpoon").ui:toggle_quick_menu(require("harpoon"):list()) end,
+    { desc = "Harpoon Menu" })
+vim.keymap.set("n", "<leader>h1", function() require("harpoon"):list():select(1) end, { desc = "Harpoon Select 1" })
+vim.keymap.set("n", "<leader>h2", function() require("harpoon"):list():select(2) end, { desc = "Harpoon Select 2" })
+vim.keymap.set("n", "<leader>h3", function() require("harpoon"):list():select(3) end, { desc = "Harpoon Select 3" })
+vim.keymap.set("n", "<leader>h4", function() require("harpoon"):list():select(4) end, { desc = "Harpoon Select 4" })
 
-vim.keymap.set("n", "<leader>ps", "<cmd>lua require('persistence').load()<cr>", { silent = true })
-vim.keymap.set("n", "<leader>pl", "<cmd>lua require('persistence').load({ last = true })<cr>", { silent = true })
-vim.keymap.set("n", "<leader>pd", "<cmd>lua require('persistence').stop()<cr>", { silent = true })
+-- Persistence sessions
+vim.keymap.set("n", "<leader>ps", "<cmd>lua require('persistence').load()<cr>", { silent = true, desc = "Load Session" })
+vim.keymap.set("n", "<leader>pl", "<cmd>lua require('persistence').load({ last = true })<cr>",
+    { silent = true, desc = "Load Last Session" })
+vim.keymap.set("n", "<leader>pd", "<cmd>lua require('persistence').stop()<cr>",
+    { silent = true, desc = "Stop Persistence" })
 
+-- Diagnostics copy helper
 vim.keymap.set("n", "<leader>zy", function()
-  local diags = vim.diagnostic.get(0)
-  if #diags == 0 then
-    vim.notify("No diagnostics in current buffer", vim.log.levels.INFO)
-    return
-  end
-  local lines = {}
-  for _, d in ipairs(diags) do
-    table.insert(lines, d.lnum + 1 .. ":" .. d.col + 1 .. " " .. d.message)
-  end
-  vim.fn.setreg("+", table.concat(lines, "\n"))
-  vim.notify("Diagnostics copied to clipboard", vim.log.levels.INFO)
-end, { desc = "Copy buffer diagnostics to clipboard" })
-
--- Below is keymap labelling for which-key.nvim
-
-local wk = require("which-key")
-
-wk.add({
-  -- File explorer
-  { "<leader>e",  function() require("oil").open() end,                          desc = "File Explorer" },
-
-  -- Find
-  { "<leader>f",  group = "Find" },
-  { "<leader>ff", function() require("telescope.builtin").find_files() end,      desc = "Find Files" },
-  { "<leader>fg", function() require("telescope.builtin").live_grep() end,       desc = "Grep Text" },
-  { "<leader>fb", function() require("telescope.builtin").buffers() end,         desc = "Find Buffers" },
-  { "<leader>fh", function() require("telescope.builtin").help_tags() end,       desc = "Help Tags" },
-  { "<leader>fd", "<cmd>Telescope diagnostics<CR>",                              desc = "Diagnostics" },
-  { "<leader>ft", "<cmd>TodoTelescope<CR>",                                      desc = "TODOs" },
-
-  -- LSP
-  { "<leader>s",  group = "LSP" },
-  { "<leader>sg", vim.lsp.buf.definition,                                        desc = "Go to Definition" },
-  { "<leader>si", vim.lsp.buf.implementation,                                    desc = "Go to Implementation" },
-  { "<leader>sR", vim.lsp.buf.references,                                        desc = "References" },
-  { "<leader>sK", vim.lsp.buf.hover,                                             desc = "Hover Info" },
-  { "<leader>sr", vim.lsp.buf.rename,                                            desc = "Rename Symbol" },
-  { "<leader>sa", function() require("actions-preview").code_actions() end,      desc = "Code Action" },
-  { "<leader>sd", "<cmd>Trouble diagnostics toggle<cr>",                         desc = "Diagnostics List" },
-
-  -- Git
-  { "<leader>g",  group = "Git" },
-  { "<leader>gs", function() require("gitsigns").stage_hunk() end,               desc = "Stage Hunk" },
-  { "<leader>gu", function() require("gitsigns").undo_stage_hunk() end,          desc = "Undo Stage" },
-  { "<leader>gr", function() require("gitsigns").reset_hunk() end,               desc = "Reset Hunk" },
-  { "<leader>gp", function() require("gitsigns").preview_hunk_inline() end,      desc = "Preview Hunk" },
-  { "<leader>gb", function() require("gitsigns").blame_line() end,               desc = "Blame Line" },
-  { "<leader>gd", function() require("gitsigns").diffthis() end,                 desc = "Diff File" },
-
-  -- Window
-  { "<leader>w",  group = "Window" },
-  { "<leader>ww", "<C-w>w",                                                      desc = "Next Window" },
-  { "<leader>wh", "<C-w>h",                                                      desc = "Left Window" },
-  { "<leader>wj", "<C-w>j",                                                      desc = "Down Window" },
-  { "<leader>wk", "<C-w>k",                                                      desc = "Up Window" },
-  { "<leader>wl", "<C-w>l",                                                      desc = "Right Window" },
-  { "<leader>ws", "<cmd>split<CR>",                                              desc = "Horizontal Split" },
-  { "<leader>wv", "<cmd>vsplit<CR>",                                             desc = "Vertical Split" },
-  { "<leader>wq", "<C-w>q",                                                      desc = "Close Window" },
-  { "<leader>wo", "<C-w>o",                                                      desc = "Only Window" },
-  { "<leader>w=", "<C-w>=",                                                      desc = "Balance Windows" },
-
-  -- Tasks & Terminals
-  { "<leader>x",  group = "Tasks/Term" },
-  { "<leader>xt", "<cmd>OverseerToggle<CR>",                                     desc = "Tasks Panel" },
-  { "<leader>xr", "<cmd>OverseerRun<CR>",                                        desc = "Run Task" },
-  { "<leader>xv", "<cmd>ToggleTerm<CR>",                                         desc = "Terminal" },
-
-  -- Tests
-  { "<leader>T",  group = "Tests" },
-  { "<leader>tn", function() require("neotest").run.run() end,                   desc = "Run nearest test" },
-  { "<leader>tf", function() require("neotest").run.run(vim.fn.expand("%")) end, desc = "Run file tests" },
-  { "<leader>to", function() require("neotest").output.open() end,               desc = "Test Output" },
-  { "<leader>ts", function() require("neotest").summary.toggle() end,            desc = "Test Summary" },
-  -- SQL
-  { "<leader>q",  group = "Database" },
-  { "<leader>qo", "<cmd>DBUI<CR>",                                               desc = "Open DBUI" },
-  { "<leader>qc", "<cmd>DBUIClose<CR>",                                          desc = "Close DBUI" },
-  { "<leader>qr", "<cmd>DBUIRename<CR>",                                         desc = "Rename Connection" },
-  { "<leader>qs", "<cmd>DBUISaveQuery<CR>",                                      desc = "Save Query" },
-  -- Markdown
-  { "<leader>m",  group = "Markdown" },
-  { "<leader>mp", "<cmd>MarkdownPreviewToggle<CR>",                              desc = "MD Preview" },
-
-  -- Folding
-  { "zR",         function() require("ufo").openAllFolds() end,                  desc = "Open all folds" },
-  { "zM",         function() require("ufo").closeAllFolds() end,                 desc = "Close all folds" },
-
-  -- Debug
-
-  { "<leader>d",  group = "Debug" },
-  { "<leader>db", function() require("dap").toggle_breakpoint() end,             desc = "Toggle Breakpoint" },
-  { "<leader>dc", function() require("dap").continue() end,                      desc = "Continue Debug" },
-  { "<leader>do", function() require("dap").step_over() end,                     desc = "Step Over" },
-  { "<leader>di", function() require("dap").step_into() end,                     desc = "Step Into" },
-  { "<leader>dO", function() require("dap").step_out() end,                      desc = "Step Out" },
-
-  -- Utilities
-  { "<leader>z",  group = "Utils" },
-  {
-    "<leader>zy",
-    function()
-      local diags = vim.diagnostic.get(0)
-      if #diags == 0 then
+    local diags = vim.diagnostic.get(0)
+    if #diags == 0 then
         vim.notify("No diagnostics in current buffer", vim.log.levels.INFO)
         return
-      end
-      local lines = {}
-      for _, d in ipairs(diags) do
-        table.insert(lines, (d.lnum + 1) .. ":" .. (d.col + 1) .. " " .. d.message)
-      end
-      vim.fn.setreg("+", table.concat(lines, "\n"))
-      vim.notify("Diagnostics copied to clipboard", vim.log.levels.INFO)
-    end,
-    desc = "Copy Diagnostics"
-  },
-})
+    end
+    local lines = {}
+    for _, d in ipairs(diags) do
+        table.insert(lines, d.lnum + 1 .. ":" .. d.col + 1 .. " " .. d.message)
+    end
+    vim.fn.setreg("+", table.concat(lines, "\n"))
+    vim.notify("Diagnostics copied to clipboard", vim.log.levels.INFO)
+end, { desc = "Copy Diagnostics" })
 
-vim.keymap.set("n", "<leader>fa", function()
-  vim.lsp.buf.format({ async = true })
-end, { silent = true })
+-- Formatting
+vim.keymap.set("n", "<leader>fa", function() vim.lsp.buf.format({ async = true }) end,
+    { silent = true, desc = "Format Buffer" })
 
-vim.keymap.set("n", "<leader>qs", function()
-  require("telescope").extensions.sqlite.tables()
-end, { desc = "SQLite Tables" })
+-- Database keymaps
+vim.keymap.set("n", "<leader>qo", "<cmd>DBUI<CR>", { desc = "Open DBUI" })
+vim.keymap.set("n", "<leader>qc", "<cmd>DBUIClose<CR>", { desc = "Close DBUI" })
+vim.keymap.set("n", "<leader>qr", "<cmd>DBUIRename<CR>", { desc = "Rename Connection" })
+vim.keymap.set("n", "<leader>qs", "<cmd>DBUISaveQuery<CR>", { desc = "Save Query" })
+vim.keymap.set("n", "<leader>qf", function()
+    local file = vim.fn.expand("%:p")
+    if file:match("%.sqlite$") or file:match("%.db$") then
+        require("sqlite").open(file)
+    else
+        vim.notify("Not a SQLite file", vim.log.levels.WARN)
+    end
+end, { desc = "Open SQLite File" })
 
-vim.keymap.set("n", "<leader>qo", function() -- Old
-  local file = vim.fn.expand("%:p")
-  if file:match("%.sqlite$") or file:match("%.db$") then
-    require("sqlite").open(file)
-  else
-    vim.notify("Not a SQLite file", vim.log.levels.WARN)
-  end
-end, { desc = "Open SQLite DB" })
+-- Tabs navigation (prefixed under <leader>b> to avoid conflicts with test mappings)
+vim.keymap.set("n", "<leader>bn", "<cmd>tabnext<CR>", { desc = "Next Tab" })
+vim.keymap.set("n", "<leader>bp", "<cmd>tabprevious<CR>", { desc = "Prev Tab" })
+vim.keymap.set("n", "<leader>bo", "<cmd>tabnew<CR>", { desc = "New Tab" })
+vim.keymap.set("n", "<leader>bc", "<cmd>tabclose<CR>", { desc = "Close Buffer" })
+vim.keymap.set("n", "<leader>bx", "<cmd>bd<CR>", { desc = "Close Buffer" })
 
-vim.api.nvim_create_autocmd("BufRead", {
-  pattern = "*.sqlite",
-  callback = function()
-    pcall(function()
-      require("telescope").extensions.sqlite.tables()
-    end)
-  end,
+-- Which‑key registrations
+local wk = require("which-key")
+wk.add({
+    -- File explorer
+    { "<leader>e",  function() require("oil").open() end,                          desc = "File Explorer (Oil)" },
+    { "<leader>nt", "<cmd>NvimTreeToggle<CR>",                                     desc = "Toggle Nvim Tree" },
+    -- Find
+    { "<leader>f",  group = "Find" },
+    { "<leader>ff", function() require("telescope.builtin").find_files() end,      desc = "Find Files" },
+    { "<leader>fg", function() require("telescope.builtin").live_grep() end,       desc = "Grep Text" },
+    { "<leader>fb", function() require("telescope.builtin").buffers() end,         desc = "Find Buffers" },
+    { "<leader>fh", function() require("telescope.builtin").help_tags() end,       desc = "Help Tags" },
+    { "<leader>fd", "<cmd>Telescope diagnostics<CR>",                              desc = "Diagnostics" },
+    { "<leader>ft", "<cmd>TodoTelescope<CR>",                                      desc = "TODOs" },
+    -- LSP
+    { "<leader>s",  group = "LSP" },
+    { "<leader>sg", vim.lsp.buf.definition,                                        desc = "Go to Definition" },
+    { "<leader>si", vim.lsp.buf.implementation,                                    desc = "Go to Implementation" },
+    { "<leader>sR", vim.lsp.buf.references,                                        desc = "References" },
+    { "<leader>sK", vim.lsp.buf.hover,                                             desc = "Hover Info" },
+    { "<leader>sr", vim.lsp.buf.rename,                                            desc = "Rename Symbol" },
+    { "<leader>sa", function() require("actions-preview").code_actions() end,      desc = "Code Action" },
+    { "<leader>sd", "<cmd>Trouble diagnostics toggle<cr>",                         desc = "Diagnostics List" },
+    -- Git
+    { "<leader>g",  group = "Git" },
+    { "<leader>gs", function() require("gitsigns").stage_hunk() end,               desc = "Stage Hunk" },
+    { "<leader>gu", function() require("gitsigns").undo_stage_hunk() end,          desc = "Undo Stage" },
+    { "<leader>gr", function() require("gitsigns").reset_hunk() end,               desc = "Reset Hunk" },
+    { "<leader>gp", function() require("gitsigns").preview_hunk_inline() end,      desc = "Preview Hunk" },
+    { "<leader>gb", function() require("gitsigns").blame_line() end,               desc = "Blame Line" },
+    { "<leader>gd", function() require("gitsigns").diffthis() end,                 desc = "Diff File" },
+    -- Window
+    { "<leader>w",  group = "Window" },
+    { "<leader>ww", "<C-w>w",                                                      desc = "Next Window" },
+    { "<leader>wh", "<C-w>h",                                                      desc = "Left Window" },
+    { "<leader>wj", "<C-w>j",                                                      desc = "Down Window" },
+    { "<leader>wk", "<C-w>k",                                                      desc = "Up Window" },
+    { "<leader>wl", "<C-w>l",                                                      desc = "Right Window" },
+    { "<leader>ws", "<cmd>split<CR>",                                              desc = "Horizontal Split" },
+    { "<leader>wv", "<cmd>vsplit<CR>",                                             desc = "Vertical Split" },
+    { "<leader>wq", "<C-w>q",                                                      desc = "Close Window" },
+    { "<leader>wo", "<C-w>o",                                                      desc = "Only Window" },
+    { "<leader>w=", "<C-w>=",                                                      desc = "Balance Windows" },
+    -- Tabs (use <leader>b prefix to avoid conflicts with neotest)
+    { "<leader>b",  group = "Tabs" },
+    { "<leader>bn", "<cmd>tabnext<CR>",                                            desc = "Next Tab" },
+    { "<leader>bp", "<cmd>tabprevious<CR>",                                        desc = "Prev Tab" },
+    { "<leader>bo", "<cmd>tabnew<CR>",                                             desc = "New Tab" },
+    { "<leader>bc", "<cmd>tabclose<CR>",                                           desc = "Close Tab" },
+    -- Tasks & Terminals
+    { "<leader>x",  group = "Tasks/Term" },
+    { "<leader>xt", "<cmd>OverseerToggle<CR>",                                     desc = "Tasks Panel" },
+    { "<leader>xr", "<cmd>OverseerRun<CR>",                                        desc = "Run Task" },
+    { "<leader>xv", "<cmd>ToggleTerm<CR>",                                         desc = "Terminal" },
+    -- Run group (code runner)
+    { "<leader>r",  group = "Run" },
+    { "<leader>rr", ":RunCode<CR>",                                                desc = "Run Code" },
+    { "<leader>rf", ":RunFile<CR>",                                                desc = "Run File" },
+    { "<leader>rp", ":RunProject<CR>",                                             desc = "Run Project" },
+    { "<leader>rc", ":RunClose<CR>",                                               desc = "Close Runner" },
+    -- Tests
+    { "<leader>T",  group = "Tests" },
+    { "<leader>tn", function() require("neotest").run.run() end,                   desc = "Run nearest test" },
+    { "<leader>tf", function() require("neotest").run.run(vim.fn.expand("%")) end, desc = "Run file tests" },
+    { "<leader>to", function() require("neotest").output.open() end,               desc = "Test Output" },
+    { "<leader>ts", function() require("neotest").summary.toggle() end,            desc = "Test Summary" },
+    -- Database
+    { "<leader>q",  group = "Database" },
+    { "<leader>qo", "<cmd>DBUI<CR>",                                               desc = "Open DBUI" },
+    { "<leader>qc", "<cmd>DBUIClose<CR>",                                          desc = "Close DBUI" },
+    { "<leader>qr", "<cmd>DBUIRename<CR>",                                         desc = "Rename Connection" },
+    { "<leader>qs", "<cmd>DBUISaveQuery<CR>",                                      desc = "Save Query" },
+    {
+        "<leader>qf",
+        function()
+            local file = vim.fn.expand("%:p")
+            if file:match("%.sqlite$") or file:match("%.db$") then
+                require("sqlite").open(file)
+            else
+                vim.notify("Not a SQLite file", vim.log.levels.WARN)
+            end
+        end,
+        desc = "Open SQLite File"
+    },
+    -- Markdown
+    { "<leader>m",  group = "Markdown" },
+    { "<leader>mp", "<cmd>MarkdownPreviewToggle<CR>",                  desc = "MD Preview" },
+    -- Folding
+    { "zR",         function() require("ufo").openAllFolds() end,      desc = "Open all folds" },
+    { "zM",         function() require("ufo").closeAllFolds() end,     desc = "Close all folds" },
+    -- Debug
+    { "<leader>d",  group = "Debug" },
+    { "<leader>db", function() require("dap").toggle_breakpoint() end, desc = "Toggle Breakpoint" },
+    { "<leader>dc", function() require("dap").continue() end,          desc = "Continue Debug" },
+    { "<leader>do", function() require("dap").step_over() end,         desc = "Step Over" },
+    { "<leader>di", function() require("dap").step_into() end,         desc = "Step Into" },
+    { "<leader>dO", function() require("dap").step_out() end,          desc = "Step Out" },
+    -- Utilities
+    { "<leader>z",  group = "Utils" },
+    {
+        "<leader>zy",
+        function()
+            local diags = vim.diagnostic.get(0)
+            if #diags == 0 then
+                vim.notify("No diagnostics in current buffer", vim.log.levels.INFO)
+                return
+            end
+            local lines = {}
+            for _, d in ipairs(diags) do
+                table.insert(lines, (d.lnum + 1) .. ":" .. (d.col + 1) .. " " .. d.message)
+            end
+            vim.fn.setreg("+", table.concat(lines, "\n"))
+            vim.notify("Diagnostics copied to clipboard", vim.log.levels.INFO)
+        end,
+        desc = "Copy Diagnostics"
+    },
 })
