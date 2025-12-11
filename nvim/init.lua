@@ -591,6 +591,25 @@ vim.keymap.set("n", "<leader>bp", "<cmd>tabprevious<CR>", { desc = "Prev Tab" })
 vim.keymap.set("n", "<leader>bo", "<cmd>tabnew<CR>", { desc = "New Tab" })
 vim.keymap.set("n", "<leader>bc", "<cmd>tabclose<CR>", { desc = "Close Buffer" })
 vim.keymap.set("n", "<leader>bx", "<cmd>bd<CR>", { desc = "Close Buffer" })
+-- Vertical split with buffer from next tab
+vim.keymap.set("n", "<leader>bv", function()
+  local cur = vim.fn.tabpagenr()
+  local next = cur == vim.fn.tabpagenr("$") and 1 or cur + 1
+  local buflist = vim.fn.tabpagebuflist(next)
+  local buf = buflist[vim.fn.tabpagewinnr(next)]
+  vim.cmd("vsplit")
+  vim.cmd("buffer " .. buf)
+end, { desc = "Vertical split with next tab's buffer" })
+
+-- Horizontal split with buffer from next tab
+vim.keymap.set("n", "<leader>bh", function()
+  local cur = vim.fn.tabpagenr()
+  local next = cur == vim.fn.tabpagenr("$") and 1 or cur + 1
+  local buflist = vim.fn.tabpagebuflist(next)
+  local buf = buflist[vim.fn.tabpagewinnr(next)]
+  vim.cmd("split")
+  vim.cmd("buffer " .. buf)
+end, { desc = "Horizontal split with next tab's buffer" })
 
 -- Which‑key registrations
 local wk = require("which-key")
