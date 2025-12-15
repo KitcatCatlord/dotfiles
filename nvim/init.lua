@@ -12,6 +12,9 @@ vim.opt.scrolloff = 6
 vim.opt.softtabstop = 4
 -- Faster update time for diagnostics
 vim.opt.updatetime = 200 -- NTS: Extra addition
+vim.opt.winblend = 0
+vim.opt.pumblend = 10
+vim.opt.cursorlineopt = "number"
 
 -- lazy.nvim bootstrap
 local lazypath = vim.fn.stdpath("data") .. "/lazy/lazy.nvim"
@@ -88,6 +91,7 @@ require("lazy").setup({
             vim.cmd("colorscheme tokyonight")
             vim.cmd("hi Normal guibg=#1a1b26")
             vim.cmd("hi NormalFloat guibg=#1a1b26")
+            vim.cmd("hi FloatBoarder guifg=#7aa2f7 guibg=#1a1b26")
             vim.cmd("hi SignColumn guibg=#1a1b26")
             vim.cmd("hi LineNr guibg=#1a1b26")
             vim.cmd("hi FoldColumn guibg=#1a1b26")
@@ -210,14 +214,43 @@ require("lazy").setup({
             require("nvim-surround").setup()
         end,
     },
-    { "folke/which-key.nvim",        config = function() require("which-key").setup() end },
     {
-        "folke/trouble.nvim",
-        dependencies = { "nvim-tree/nvim-web-devicons" },
+        "folke/which-key.nvim",
         config = function()
-            require("trouble").setup()
+            require("which-key").setup({
+                preset = "classic",
+
+                win = {
+                    border = "rounded",
+                    padding = { 1, 2 },
+                    title = true,
+                    title_pos = "center",
+                    row = math.huge,
+                    col = math.huge,
+                    wo = { winblend = 10 },
+                },
+
+                layout = {
+                    width = { min = 20, max = 100 },
+                    spacing = 3,
+                    align = "left",
+                },
+
+                icons = {
+                    breadcrumb = "»",
+                    separator = "➜",
+                    group = "+",
+                },
+            })
         end,
-    },
+
+    }, {
+    "folke/trouble.nvim",
+    dependencies = { "nvim-tree/nvim-web-devicons" },
+    config = function()
+        require("trouble").setup()
+    end,
+},
     { "aznhe21/actions-preview.nvim" },
     { "williamboman/mason.nvim",     config = function() require("mason").setup() end },
     {
@@ -242,6 +275,10 @@ require("lazy").setup({
             local cmp = require("cmp")
             require("luasnip.loaders.from_vscode").lazy_load()
             cmp.setup({
+                window = {
+                    completion = cmp.config.window.bordered(),
+                    documentation = cmp.config.window.bordered(),
+                },
                 snippet = {
                     expand = function(args)
                         require("luasnip").lsp_expand(args.body)
@@ -465,6 +502,9 @@ vim.diagnostic.config({
     virtual_text = true,
     signs = true,
     underline = true,
+    float = {
+        border = "rounded",
+    },
 })
 
 local pid = vim.fn.getpid()
@@ -593,22 +633,22 @@ vim.keymap.set("n", "<leader>bc", "<cmd>tabclose<CR>", { desc = "Close Buffer" }
 vim.keymap.set("n", "<leader>bx", "<cmd>bd<CR>", { desc = "Close Buffer" })
 -- Vertical split with buffer from next tab
 vim.keymap.set("n", "<leader>bv", function()
-  local cur = vim.fn.tabpagenr()
-  local next = cur == vim.fn.tabpagenr("$") and 1 or cur + 1
-  local buflist = vim.fn.tabpagebuflist(next)
-  local buf = buflist[vim.fn.tabpagewinnr(next)]
-  vim.cmd("vsplit")
-  vim.cmd("buffer " .. buf)
+    local cur = vim.fn.tabpagenr()
+    local next = cur == vim.fn.tabpagenr("$") and 1 or cur + 1
+    local buflist = vim.fn.tabpagebuflist(next)
+    local buf = buflist[vim.fn.tabpagewinnr(next)]
+    vim.cmd("vsplit")
+    vim.cmd("buffer " .. buf)
 end, { desc = "Vertical split with next tab's buffer" })
 
 -- Horizontal split with buffer from next tab
 vim.keymap.set("n", "<leader>bh", function()
-  local cur = vim.fn.tabpagenr()
-  local next = cur == vim.fn.tabpagenr("$") and 1 or cur + 1
-  local buflist = vim.fn.tabpagebuflist(next)
-  local buf = buflist[vim.fn.tabpagewinnr(next)]
-  vim.cmd("split")
-  vim.cmd("buffer " .. buf)
+    local cur = vim.fn.tabpagenr()
+    local next = cur == vim.fn.tabpagenr("$") and 1 or cur + 1
+    local buflist = vim.fn.tabpagebuflist(next)
+    local buf = buflist[vim.fn.tabpagewinnr(next)]
+    vim.cmd("split")
+    vim.cmd("buffer " .. buf)
 end, { desc = "Horizontal split with next tab's buffer" })
 
 -- Which‑key registrations
