@@ -250,7 +250,7 @@ require("lazy").setup({
         "folke/which-key.nvim",
         config = function()
             require("which-key").setup({
-                preset = "classic",
+                preset = "helix",
 
                 win = {
                     border = "rounded",
