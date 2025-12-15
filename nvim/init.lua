@@ -31,6 +31,17 @@ end
 vim.opt.rtp:prepend(lazypath)
 
 require("lazy").setup({
+    -- DOTNET running
+    {
+        "GustavEikaas/easy-dotnet.nvim",
+        dependencies = {
+            "nvim-lua/plenary.nvim",
+            "mfussenegger/nvim-dap",
+        },
+        config = function()
+            require("easy-dotnet").setup()
+        end,
+    },
     -- File explorer
     {
         "nvim-tree/nvim-tree.lua",
@@ -496,9 +507,12 @@ require("lazy").setup({
                     c = "cd $dir && gcc $fileName -o /tmp/$fileNameWithoutExt && /tmp/$fileNameWithoutExt",
                     cpp = "cd $dir && g++ $fileName -o /tmp/$fileNameWithoutExt && /tmp/$fileNameWithoutExt",
                     cs = function()
-                        -- find the nearest csproj to run dotnet project
-                        local root_dir = lspconfig.util.root_pattern("*.csproj")(vim.fn.getcwd())
-                        return "cd " .. (root_dir or "$dir") .. " && dotnet run$end"
+                        local util = require("lspconfig.util")
+                        local root = util.root_pattern("*.csproj")(vim.api.nvim_buf_get_name(0))
+                        if root == nil then
+                            return "dotnet run"
+                        end
+                        return "cd " .. root .. " && dotnet run"
                     end,
                     python = "python3 -u",
                     lua = "lua",
@@ -816,3 +830,5 @@ vim.keymap.set("n", "K", "<cmd>Lspsaga hover_doc<CR>", { desc = "Hover (Lspsaga)
 vim.keymap.set("n", "<leader>ca", "<cmd>Lspsaga code_action<CR>", { desc = "Code Action" })
 vim.keymap.set("n", "<leader>sd", "<cmd>Lspsaga show_line_diagnostics<CR>", { desc = "Line Diagnostics" })
 vim.keymap.set("n", "<leader>sf", "<cmd>Lspsaga finder<CR>", { desc = "LSP Finder" })
+-- Dotnet running
+vim.keymap.set("n", "<leader>rd", "<cmd>Dotnet run<CR>", { desc = "Dotnet Run Project" })
