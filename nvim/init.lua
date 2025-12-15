@@ -91,12 +91,37 @@ require("lazy").setup({
             vim.cmd("colorscheme tokyonight")
             vim.cmd("hi Normal guibg=#1a1b26")
             vim.cmd("hi NormalFloat guibg=#1a1b26")
-            vim.cmd("hi FloatBoarder guifg=#7aa2f7 guibg=#1a1b26")
+            vim.cmd("hi FloatBorder guifg=#7aa2f7 guibg=#1a1b26")
             vim.cmd("hi SignColumn guibg=#1a1b26")
             vim.cmd("hi LineNr guibg=#1a1b26")
             vim.cmd("hi FoldColumn guibg=#1a1b26")
         end,
+    }, {
+    "folke/flash.nvim",
+    event = "VeryLazy",
+    opts = {},
+},
+    {
+        "echasnovski/mini.ai",
+        event = "VeryLazy",
+        opts = {},
     },
+    {
+        "nvimdev/lspsaga.nvim",
+        dependencies = { "nvim-tree/nvim-web-devicons" },
+        event = "LspAttach",
+        config = function()
+            require("lspsaga").setup({
+                ui = {
+                    border = "rounded",
+                },
+                lightbulb = {
+                    enable = false,
+                },
+            })
+        end,
+    },
+    { "tpope/vim-repeat" },
     {
         "nvim-treesitter/nvim-treesitter",
         build = ":TSUpdate",
@@ -767,4 +792,15 @@ wk.add({
         end,
         desc = "Copy Diagnostics"
     },
+    -- Misc
+    { "s",          group = "Flash" },
+    { "<leader>sl", group = "LSP UI" },
+    { "]d",         desc = "Next Diagnostic" },
+    { "[d",         desc = "Prev Diagnostic" },
+    { "za",         desc = "Toggle Fold" },
+    { "zc",         desc = "Close Fold" },
+    { "zo",         desc = "Open Fold" },
 })
+vim.keymap.set({ "n", "x", "o" }, "s", function()
+    require("flash").jump()
+end, { desc = "Flash Jump" })
