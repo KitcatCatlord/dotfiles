@@ -109,11 +109,18 @@ require("lazy").setup({
     {
         "nvimdev/lspsaga.nvim",
         dependencies = { "nvim-tree/nvim-web-devicons" },
-        event = "LspAttach",
         config = function()
             require("lspsaga").setup({
                 ui = {
                     border = "rounded",
+                    title = true,
+                },
+                hover = {
+                    max_width = 0.6,
+                    max_height = 0.5,
+                },
+                code_action = {
+                    show_server_name = true,
                 },
                 lightbulb = {
                     enable = false,
@@ -804,3 +811,8 @@ wk.add({
 vim.keymap.set({ "n", "x", "o" }, "s", function()
     require("flash").jump()
 end, { desc = "Flash Jump" })
+-- lspsaga
+vim.keymap.set("n", "K", "<cmd>Lspsaga hover_doc<CR>", { desc = "Hover (Lspsaga)" })
+vim.keymap.set("n", "<leader>ca", "<cmd>Lspsaga code_action<CR>", { desc = "Code Action" })
+vim.keymap.set("n", "<leader>sd", "<cmd>Lspsaga show_line_diagnostics<CR>", { desc = "Line Diagnostics" })
+vim.keymap.set("n", "<leader>sf", "<cmd>Lspsaga finder<CR>", { desc = "LSP Finder" })
