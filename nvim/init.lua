@@ -170,7 +170,14 @@ require("lazy").setup({
         "nvim-lualine/lualine.nvim",
         dependencies = { "nvim-tree/nvim-web-devicons" },
         config = function()
-            require("lualine").setup({ options = { theme = "tokyonight" } })
+            require('lualine').setup {
+                options = {
+                    component_separators = "",
+                    section_separators = {right = "", left = ""},
+                    icons_enabled = true,
+                    theme = "auto",
+                },
+            }
         end,
     },
     {
