@@ -107,11 +107,12 @@ require("lazy").setup({
     --            vim.cmd("hi LineNr guibg=#1a1b26")
     --            vim.cmd("hi FoldColumn guibg=#1a1b26")
     --        end,
-    --    }, {
-    --    "folke/flash.nvim",
-    --    event = "VeryLazy",
-    --    opts = {},
-    --},
+    --    },
+    {
+        "folke/flash.nvim",
+        event = "VeryLazy",
+        opts = {},
+    },
     {
         "catppuccin/nvim",
         name = "catppuccin",
@@ -861,3 +862,29 @@ vim.keymap.set("n", "<leader>sd", "<cmd>Lspsaga show_line_diagnostics<CR>", { de
 vim.keymap.set("n", "<leader>sf", "<cmd>Lspsaga finder<CR>", { desc = "LSP Finder" })
 -- Dotnet running
 vim.keymap.set("n", "<leader>rd", "<cmd>Dotnet run<CR>", { desc = "Dotnet Run Project" })
+
+-- Per-language tab/space behaviour
+vim.api.nvim_create_autocmd("FileType", {
+    pattern = { "cpp", "c", "cs", "python", "lua", "javascript", "typescript" },
+    callback = function(ev)
+        local ft = vim.bo[ev.buf].filetype
+
+        if ft == "cpp" or ft == "c" then
+            vim.bo.tabstop = 2
+            vim.bo.shiftwidth = 2
+            vim.bo.softtabstop = 2
+            vim.bo.expandtab = true
+        elseif ft == "cs" then
+            vim.bo.tabstop = 4
+            vim.bo.shiftwidth = 4
+            vim.bo.softtabstop = 4
+            vim.bo.expandtab = true
+        elseif ft == "python" then
+            vim.bo.tabstop = 4
+            vim.bo.shiftwidth = 4
+            vim.bo.softtabstop = 4
+            vim.bo.expandtab = true
+        end
+    end,
+})
+vim.keymap.set("n", "<leader>nn", "<cmd>Notifications<CR>", { desc = "Show Notifications"})
