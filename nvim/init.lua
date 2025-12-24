@@ -91,27 +91,49 @@ require("lazy").setup({
             vim.keymap.set("n", "<leader>nt", "<cmd>NvimTreeToggle<CR>", { silent = true, desc = "Toggle Nvim Tree" })
         end,
     },
+    --    {
+    --        "folke/tokyonight.nvim",
+    --        lazy = false,
+    --        priority = 1000,
+    --        config = function()
+    --            require("tokyonight").setup({
+    --                style = "moon",
+    --            })
+    --            vim.cmd("colorscheme tokyonight")
+    --            vim.cmd("hi Normal guibg=#1a1b26")
+    --            vim.cmd("hi NormalFloat guibg=#1a1b26")
+    --            vim.cmd("hi FloatBorder guifg=#7aa2f7 guibg=#1a1b26")
+    --            vim.cmd("hi SignColumn guibg=#1a1b26")
+    --            vim.cmd("hi LineNr guibg=#1a1b26")
+    --            vim.cmd("hi FoldColumn guibg=#1a1b26")
+    --        end,
+    --    }, {
+    --    "folke/flash.nvim",
+    --    event = "VeryLazy",
+    --    opts = {},
+    --},
     {
-        "folke/tokyonight.nvim",
+        "catppuccin/nvim",
+        name = "catppuccin",
         lazy = false,
         priority = 1000,
         config = function()
-            require("tokyonight").setup({
-                style = "moon",
+            require("catppuccin").setup({
+                flavour = "mocha",
+                transparent_background = false,
+                integrations = {
+                    treesitter = true,
+                    nvimtree = true,
+                    telescope = true,
+                    lualine = true,
+                    bufferline = true,
+                    mason = true,
+                    which_key = true,
+                },
             })
-            vim.cmd("colorscheme tokyonight")
-            vim.cmd("hi Normal guibg=#1a1b26")
-            vim.cmd("hi NormalFloat guibg=#1a1b26")
-            vim.cmd("hi FloatBorder guifg=#7aa2f7 guibg=#1a1b26")
-            vim.cmd("hi SignColumn guibg=#1a1b26")
-            vim.cmd("hi LineNr guibg=#1a1b26")
-            vim.cmd("hi FoldColumn guibg=#1a1b26")
+            vim.cmd.colorscheme("catppuccin")
         end,
-    }, {
-    "folke/flash.nvim",
-    event = "VeryLazy",
-    opts = {},
-},
+    },
     {
         "echasnovski/mini.ai",
         event = "VeryLazy",
@@ -173,7 +195,7 @@ require("lazy").setup({
             require('lualine').setup {
                 options = {
                     component_separators = "",
-                    section_separators = {right = "", left = ""},
+                    section_separators = { right = "", left = "" },
                     icons_enabled = true,
                     theme = "auto",
                 },
