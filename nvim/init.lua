@@ -888,3 +888,4 @@ vim.api.nvim_create_autocmd("FileType", {
     end,
 })
 vim.keymap.set("n", "<leader>nn", "<cmd>Notifications<CR>", { desc = "Show Notifications"})
+vim.keymap.set("n", "<leader>no", "<cmd>noh<CR>", {desc = "Hide Finds"})
