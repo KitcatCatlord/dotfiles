@@ -57,5 +57,17 @@ Make each script executable:
 chmod +x scriptname
 ```
 
+### tsaver
+
+Chooses a random screensaver out of cbonsai, asiiquarium, cmatrix and pipes.sh. Make sure you have these installed! I'd recommend using brew to install them.
+
+Usage:
+
+```sh
+tsaver
+```
+
+## Tips
+
 Place executable scripts directly in this folder if you want them to work as commands.
 Don't create folders to organise scripts - you'll have to add each subfolder to PATH.
