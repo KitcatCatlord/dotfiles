@@ -707,25 +707,76 @@ vim.keymap.set("n", "<leader>bp", "<cmd>tabprevious<CR>", { desc = "Prev Tab" })
 vim.keymap.set("n", "<leader>bo", "<cmd>tabnew<CR>", { desc = "New Tab" })
 vim.keymap.set("n", "<leader>bc", "<cmd>tabclose<CR>", { desc = "Close Buffer" })
 vim.keymap.set("n", "<leader>bx", "<cmd>bd<CR>", { desc = "Close Buffer" })
--- Vertical split with buffer from next tab
+
+-------- START OF TAB SPLITTING -----------
+
+-- Track previously-selected tab safely
+local prev_tab = nil
+local last_tab = vim.fn.tabpagenr()
+
+vim.api.nvim_create_autocmd("TabLeave", {
+    callback = function()
+        last_tab = vim.fn.tabpagenr()
+    end,
+})
+
+vim.api.nvim_create_autocmd("TabEnter", {
+    callback = function()
+        prev_tab = last_tab
+    end,
+})
+
+-- Vertical split with PREVIOUSLY SELECTED tab's buffer
 vim.keymap.set("n", "<leader>bv", function()
-    local cur = vim.fn.tabpagenr()
-    local next = cur == vim.fn.tabpagenr("$") and 1 or cur + 1
-    local buflist = vim.fn.tabpagebuflist(next)
-    local buf = buflist[vim.fn.tabpagewinnr(next)]
+    if prev_tab == vim.fn.tabpagenr() then
+        vim.notify("No previous tab", vim.log.levels.WARN)
+        return
+    end
+    local buflist = vim.fn.tabpagebuflist(prev_tab)
+    local buf = buflist[vim.fn.tabpagewinnr(prev_tab)]
     vim.cmd("vsplit")
     vim.cmd("buffer " .. buf)
-end, { desc = "Vertical split with next tab's buffer" })
+end, { desc = "Vertical split with previous selected tab" })
 
--- Horizontal split with buffer from next tab
+-- Horizontal split with PREVIOUSLY SELECTED tab's buffer
 vim.keymap.set("n", "<leader>bh", function()
-    local cur = vim.fn.tabpagenr()
-    local next = cur == vim.fn.tabpagenr("$") and 1 or cur + 1
-    local buflist = vim.fn.tabpagebuflist(next)
-    local buf = buflist[vim.fn.tabpagewinnr(next)]
+    if prev_tab == vim.fn.tabpagenr() then
+        vim.notify("No previous tab", vim.log.levels.WARN)
+        return
+    end
+    local buflist = vim.fn.tabpagebuflist(prev_tab)
+    local buf = buflist[vim.fn.tabpagewinnr(prev_tab)]
     vim.cmd("split")
     vim.cmd("buffer " .. buf)
-end, { desc = "Horizontal split with next tab's buffer" })
+end, { desc = "Horizontal split with previous selected tab" })
+
+-- Ask which tab to split from
+vim.keymap.set("n", "<leader>bV", function()
+    local t = tonumber(vim.fn.input("Tab number: "))
+    if not t or t < 1 or t > vim.fn.tabpagenr("$") then
+        vim.notify("Invalid tab", vim.log.levels.ERROR)
+        return
+    end
+    local buflist = vim.fn.tabpagebuflist(t)
+    local buf = buflist[vim.fn.tabpagewinnr(t)]
+    vim.cmd("vsplit")
+    vim.cmd("buffer " .. buf)
+end, { desc = "Vertical split from chosen tab" })
+
+vim.keymap.set("n", "<leader>bH", function()
+    local t = tonumber(vim.fn.input("Tab number: "))
+    if not t or t < 1 or t > vim.fn.tabpagenr("$") then
+        vim.notify("Invalid tab", vim.log.levels.ERROR)
+        return
+    end
+    local buflist = vim.fn.tabpagebuflist(t)
+    local buf = buflist[vim.fn.tabpagewinnr(t)]
+    vim.cmd("split")
+    vim.cmd("buffer " .. buf)
+end, { desc = "Horizontal split from chosen tab" })
+
+
+-------- END OF TAB SPLITTING -----------
 
 -- Which‑key registrations
 local wk = require("which-key")
@@ -889,3 +940,4 @@ vim.api.nvim_create_autocmd("FileType", {
 })
 vim.keymap.set("n", "<leader>nn", "<cmd>Notifications<CR>", { desc = "Show Notifications"})
 vim.keymap.set("n", "<leader>no", "<cmd>noh<CR>", {desc = "Hide Finds"})
+
