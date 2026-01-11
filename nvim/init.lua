@@ -56,8 +56,17 @@ require("lazy").setup({
                     end
                     -- load default mappings then add our own
                     api.config.mappings.default_on_attach(bufnr)
-                    -- Open the selected file in a new tab when pressing 't'
-                    vim.keymap.set("n", "t", api.node.open.tab, opts("Open in new tab"))
+                    -- Open the selected file in a new tab without leaving the tree when pressing 't'
+                    vim.keymap.set("n", "t", function()
+                        local node = api.tree.get_node_under_cursor()
+                        if not node or node.type ~= "file" then
+                            return
+                        end
+                        -- add to buffer list
+                        vim.cmd("badd " .. vim.fn.fnameescape(node.absolute_path))
+                        -- close the tree window if desired
+                        api.tree.close()
+                    end, opts("Open in buffer, close tree"))
                 end,
                 view = {
                     width = 35,
@@ -198,7 +207,7 @@ require("lazy").setup({
                     component_separators = "",
                     section_separators = { right = "", left = "" },
                     icons_enabled = true,
-                    theme = "auto",
+                    theme = "catppuccin",
                 },
             }
         end,
@@ -210,7 +219,8 @@ require("lazy").setup({
         config = function()
             require("bufferline").setup({
                 options = {
-                    mode = "tabs",
+                    -- Show buffers rather than tabs in the bufferline
+                    mode = "buffers",
                     diagnostics = "nvim_lsp",
                     diagnostics_indicator = function(count, level)
                         local icon = level:match("error") and " " or " "
@@ -622,14 +632,13 @@ vim.keymap.set("n", "<leader>fh", function() require("telescope.builtin").help_t
 vim.keymap.set("n", "<leader>ft", "<cmd>TodoTelescope<CR>", { silent = true, desc = "TODOs" })
 
 -- Code actions
-vim.keymap.set({ "n", "v" }, "<leader>ca", function() require("actions-preview").code_actions() end,
-    { silent = true, desc = "Code Action" })
 
 -- LSP navigation
 vim.keymap.set("n", "gd", vim.lsp.buf.definition, { silent = true, desc = "Go to Definition" })
 vim.keymap.set("n", "gr", vim.lsp.buf.references, { silent = true, desc = "References" })
 vim.keymap.set("n", "gi", vim.lsp.buf.implementation, { silent = true, desc = "Go to Implementation" })
-vim.keymap.set("n", "K", vim.lsp.buf.hover, { silent = true, desc = "Hover Info" })
+-- Use lspsaga for hover documentation. The built-in hover mapping is removed to avoid conflicts
+-- vim.keymap.set("n", "K", vim.lsp.buf.hover, { silent = true, desc = "Hover Info" })
 vim.keymap.set("n", "<leader>rn", vim.lsp.buf.rename, { silent = true, desc = "Rename Symbol" })
 vim.keymap.set("n", "<leader>sd", "<cmd>Trouble diagnostics toggle<cr>", { silent = true, desc = "Diagnostics List" })
 
@@ -701,143 +710,183 @@ vim.keymap.set("n", "<leader>qf", function()
     end
 end, { desc = "Open SQLite File" })
 
--- Tabs navigation (prefixed under <leader>b> to avoid conflicts with test mappings)
-vim.keymap.set("n", "<leader>bn", "<cmd>tabnext<CR>", { desc = "Next Tab" })
-vim.keymap.set("n", "<leader>bp", "<cmd>tabprevious<CR>", { desc = "Prev Tab" })
-vim.keymap.set("n", "<leader>bo", "<cmd>tabnew<CR>", { desc = "New Tab" })
-vim.keymap.set("n", "<leader>bc", "<cmd>tabclose<CR>", { desc = "Close Buffer" })
-vim.keymap.set("n", "<leader>bx", "<cmd>bd<CR>", { desc = "Close Buffer" })
+-- Buffer navigation keymaps
+vim.keymap.set("n", "<leader>bn", "<cmd>bnext<CR>", { desc = "Next Buffer" })
+vim.keymap.set("n", "<leader>bp", "<cmd>bprevious<CR>", { desc = "Prev Buffer" })
+vim.keymap.set("n", "<leader>bo", "<cmd>enew<CR>", { desc = "New Buffer" })
+vim.keymap.set("n", "<leader>bc", "<cmd>bdelete<CR>", { desc = "Close Buffer" })
 
--------- START OF TAB SPLITTING -----------
+-------- START OF BUFFER SPLITTING -----------
 
--- Track previously-selected tab safely
-local prev_tab = nil
-local last_tab = vim.fn.tabpagenr()
+-- Track previously-selected buffer safely
+local prev_buf = nil
 
-vim.api.nvim_create_autocmd("TabLeave", {
-    callback = function()
-        last_tab = vim.fn.tabpagenr()
+-- When leaving a buffer, remember it as previous
+vim.api.nvim_create_autocmd("BufLeave", {
+    callback = function(args)
+        prev_buf = args.buf
     end,
 })
 
-vim.api.nvim_create_autocmd("TabEnter", {
-    callback = function()
-        prev_tab = last_tab
-    end,
-})
-
--- Vertical split with PREVIOUSLY SELECTED tab's buffer
+-- Vertical split with previously selected buffer
 vim.keymap.set("n", "<leader>bv", function()
-    if prev_tab == vim.fn.tabpagenr() then
-        vim.notify("No previous tab", vim.log.levels.WARN)
+    if not prev_buf or prev_buf == vim.api.nvim_get_current_buf() then
+        vim.notify("No previous buffer", vim.log.levels.WARN)
         return
     end
-    local buflist = vim.fn.tabpagebuflist(prev_tab)
-    local buf = buflist[vim.fn.tabpagewinnr(prev_tab)]
     vim.cmd("vsplit")
-    vim.cmd("buffer " .. buf)
-end, { desc = "Vertical split with previous selected tab" })
+    vim.cmd("buffer " .. prev_buf)
+end, { desc = "Vertical split with previous buffer" })
 
--- Horizontal split with PREVIOUSLY SELECTED tab's buffer
+-- Horizontal split with previously selected buffer
 vim.keymap.set("n", "<leader>bh", function()
-    if prev_tab == vim.fn.tabpagenr() then
-        vim.notify("No previous tab", vim.log.levels.WARN)
+    if not prev_buf or prev_buf == vim.api.nvim_get_current_buf() then
+        vim.notify("No previous buffer", vim.log.levels.WARN)
         return
     end
-    local buflist = vim.fn.tabpagebuflist(prev_tab)
-    local buf = buflist[vim.fn.tabpagewinnr(prev_tab)]
     vim.cmd("split")
-    vim.cmd("buffer " .. buf)
-end, { desc = "Horizontal split with previous selected tab" })
+    vim.cmd("buffer " .. prev_buf)
+end, { desc = "Horizontal split with previous buffer" })
 
--- Ask which tab to split from
-vim.keymap.set("n", "<leader>bV", function()
-    local t = tonumber(vim.fn.input("Tab number: "))
-    if not t or t < 1 or t > vim.fn.tabpagenr("$") then
-        vim.notify("Invalid tab", vim.log.levels.ERROR)
-        return
-    end
-    local buflist = vim.fn.tabpagebuflist(t)
-    local buf = buflist[vim.fn.tabpagewinnr(t)]
-    vim.cmd("vsplit")
-    vim.cmd("buffer " .. buf)
-end, { desc = "Vertical split from chosen tab" })
+-------- END OF BUFFER SPLITTING -----------
 
-vim.keymap.set("n", "<leader>bH", function()
-    local t = tonumber(vim.fn.input("Tab number: "))
-    if not t or t < 1 or t > vim.fn.tabpagenr("$") then
-        vim.notify("Invalid tab", vim.log.levels.ERROR)
-        return
-    end
-    local buflist = vim.fn.tabpagebuflist(t)
-    local buf = buflist[vim.fn.tabpagewinnr(t)]
-    vim.cmd("split")
-    vim.cmd("buffer " .. buf)
-end, { desc = "Horizontal split from chosen tab" })
-
-
--------- END OF TAB SPLITTING -----------
-
+-- Window management keymaps
+-- These mappings mirror the defaults but with a leader prefix for convenience
+vim.keymap.set("n", "<leader>ww", "<C-w>w", { desc = "Next Window" })
+vim.keymap.set("n", "<leader>wh", "<C-w>h", { desc = "Left Window" })
+vim.keymap.set("n", "<leader>wj", "<C-w>j", { desc = "Down Window" })
+vim.keymap.set("n", "<leader>wk", "<C-w>k", { desc = "Up Window" })
+vim.keymap.set("n", "<leader>wl", "<C-w>l", { desc = "Right Window" })
+vim.keymap.set("n", "<leader>ws", "<cmd>split<CR>", { desc = "Horizontal Split" })
+vim.keymap.set("n", "<leader>wv", "<cmd>vsplit<CR>", { desc = "Vertical Split" })
+vim.keymap.set("n", "<leader>wq", "<C-w>q", { desc = "Close Window" })
+vim.keymap.set("n", "<leader>wo", "<C-w>o", { desc = "Only Window" })
+vim.keymap.set("n", "<leader>w=", "<C-w>=", { desc = "Balance Windows" })
+-- Resize splits
+vim.keymap.set("n", "<leader>w<", "<C-w><", { desc = "Decrease window width" })
+vim.keymap.set("n", "<leader>w>", "<C-w>>", { desc = "Increase window width" })
+vim.keymap.set("n", "<leader>w-", "<C-w>-", { desc = "Decrease window height" })
+vim.keymap.set("n", "<leader>w+", "<C-w>+", { desc = "Increase window height" })
 -- Which‑key registrations
 local wk = require("which-key")
-wk.add({
+wkr = require("which-key") -- alias for clarity in modifications
+wkr.add({
     -- File explorer
-    { "<leader>e",  function() require("oil").open() end,                          desc = "File Explorer (Oil)" },
-    { "<leader>nt", "<cmd>NvimTreeToggle<CR>",                                     desc = "Toggle Nvim Tree" },
+    { "<leader>e",  function() require("oil").open() end,                     desc = "File Explorer (Oil)" },
+    { "<leader>nt", "<cmd>NvimTreeToggle<CR>",                                desc = "Toggle Nvim Tree" },
     -- Find
     { "<leader>f",  group = "Find" },
-    { "<leader>ff", function() require("telescope.builtin").find_files() end,      desc = "Find Files" },
-    { "<leader>fg", function() require("telescope.builtin").live_grep() end,       desc = "Grep Text" },
-    { "<leader>fb", function() require("telescope.builtin").buffers() end,         desc = "Find Buffers" },
-    { "<leader>fh", function() require("telescope.builtin").help_tags() end,       desc = "Help Tags" },
-    { "<leader>fd", "<cmd>Telescope diagnostics<CR>",                              desc = "Diagnostics" },
-    { "<leader>ft", "<cmd>TodoTelescope<CR>",                                      desc = "TODOs" },
+    { "<leader>ff", function() require("telescope.builtin").find_files() end, desc = "Find Files" },
+    { "<leader>fg", function() require("telescope.builtin").live_grep() end,  desc = "Grep Text" },
+    { "<leader>fb", function() require("telescope.builtin").buffers() end,    desc = "Find Buffers" },
+    { "<leader>fh", function() require("telescope.builtin").help_tags() end,  desc = "Help Tags" },
+    { "<leader>fd", "<cmd>Telescope diagnostics<CR>",                         desc = "Diagnostics" },
+    { "<leader>ft", "<cmd>TodoTelescope<CR>",                                 desc = "TODOs" },
     -- LSP
     { "<leader>s",  group = "LSP" },
-    { "<leader>sg", vim.lsp.buf.definition,                                        desc = "Go to Definition" },
-    { "<leader>si", vim.lsp.buf.implementation,                                    desc = "Go to Implementation" },
-    { "<leader>sR", vim.lsp.buf.references,                                        desc = "References" },
-    { "<leader>sK", vim.lsp.buf.hover,                                             desc = "Hover Info" },
-    { "<leader>sr", vim.lsp.buf.rename,                                            desc = "Rename Symbol" },
-    { "<leader>sa", function() require("actions-preview").code_actions() end,      desc = "Code Action" },
-    { "<leader>sd", "<cmd>Trouble diagnostics toggle<cr>",                         desc = "Diagnostics List" },
+    { "<leader>sg", vim.lsp.buf.definition,                                   desc = "Go to Definition" },
+    { "<leader>si", vim.lsp.buf.implementation,                               desc = "Go to Implementation" },
+    { "<leader>sR", vim.lsp.buf.references,                                   desc = "References" },
+    { "<leader>sK", vim.lsp.buf.hover,                                        desc = "Hover Info" },
+    { "<leader>sr", vim.lsp.buf.rename,                                       desc = "Rename Symbol" },
+    { "<leader>sa", function() require("actions-preview").code_actions() end, desc = "Code Action" },
+    { "<leader>sd", "<cmd>Trouble diagnostics toggle<cr>",                    desc = "Diagnostics List" },
+    -- Provide a separate key for line diagnostics using lspsaga
+    { "<leader>sl", "<cmd>Lspsaga show_line_diagnostics<CR>",                 desc = "Line Diagnostics" },
+    { "<leader>ca", "<cmd>Lspsaga code_action<CR>",                           desc = "Code Action (Saga)" },
+    { "<leader>sf", "<cmd>Lspsaga finder<CR>",                                desc = "LSP Finder" },
+    { "<leader>fa", function() vim.lsp.buf.format({ async = true }) end,      desc = "Format Buffer" },
+    -- Quick rename symbol
+    { "<leader>rn", vim.lsp.buf.rename,                                       desc = "Rename Symbol" },
     -- Git
     { "<leader>g",  group = "Git" },
-    { "<leader>gs", function() require("gitsigns").stage_hunk() end,               desc = "Stage Hunk" },
-    { "<leader>gu", function() require("gitsigns").undo_stage_hunk() end,          desc = "Undo Stage" },
-    { "<leader>gr", function() require("gitsigns").reset_hunk() end,               desc = "Reset Hunk" },
-    { "<leader>gp", function() require("gitsigns").preview_hunk_inline() end,      desc = "Preview Hunk" },
-    { "<leader>gb", function() require("gitsigns").blame_line() end,               desc = "Blame Line" },
-    { "<leader>gd", function() require("gitsigns").diffthis() end,                 desc = "Diff File" },
+    { "<leader>gs", function() require("gitsigns").stage_hunk() end,          desc = "Stage Hunk" },
+    { "<leader>gu", function() require("gitsigns").undo_stage_hunk() end,     desc = "Undo Stage" },
+    { "<leader>gr", function() require("gitsigns").reset_hunk() end,          desc = "Reset Hunk" },
+    { "<leader>gp", function() require("gitsigns").preview_hunk_inline() end, desc = "Preview Hunk" },
+    { "<leader>gb", function() require("gitsigns").blame_line() end,          desc = "Blame Line" },
+    { "<leader>gd", function() require("gitsigns").diffthis() end,            desc = "Diff File" },
     -- Window
     { "<leader>w",  group = "Window" },
-    { "<leader>ww", "<C-w>w",                                                      desc = "Next Window" },
-    { "<leader>wh", "<C-w>h",                                                      desc = "Left Window" },
-    { "<leader>wj", "<C-w>j",                                                      desc = "Down Window" },
-    { "<leader>wk", "<C-w>k",                                                      desc = "Up Window" },
-    { "<leader>wl", "<C-w>l",                                                      desc = "Right Window" },
-    { "<leader>ws", "<cmd>split<CR>",                                              desc = "Horizontal Split" },
-    { "<leader>wv", "<cmd>vsplit<CR>",                                             desc = "Vertical Split" },
-    { "<leader>wq", "<C-w>q",                                                      desc = "Close Window" },
-    { "<leader>wo", "<C-w>o",                                                      desc = "Only Window" },
-    { "<leader>w=", "<C-w>=",                                                      desc = "Balance Windows" },
-    -- Tabs (use <leader>b prefix to avoid conflicts with neotest)
-    { "<leader>b",  group = "Tabs" },
-    { "<leader>bn", "<cmd>tabnext<CR>",                                            desc = "Next Tab" },
-    { "<leader>bp", "<cmd>tabprevious<CR>",                                        desc = "Prev Tab" },
-    { "<leader>bo", "<cmd>tabnew<CR>",                                             desc = "New Tab" },
-    { "<leader>bc", "<cmd>tabclose<CR>",                                           desc = "Close Tab" },
+    { "<leader>ww", "<C-w>w",                                                 desc = "Next Window" },
+    { "<leader>wh", "<C-w>h",                                                 desc = "Left Window" },
+    { "<leader>wj", "<C-w>j",                                                 desc = "Down Window" },
+    { "<leader>wk", "<C-w>k",                                                 desc = "Up Window" },
+    { "<leader>wl", "<C-w>l",                                                 desc = "Right Window" },
+    { "<leader>ws", "<cmd>split<CR>",                                         desc = "Horizontal Split" },
+    { "<leader>wv", "<cmd>vsplit<CR>",                                        desc = "Vertical Split" },
+    { "<leader>wq", "<C-w>q",                                                 desc = "Close Window" },
+    { "<leader>wo", "<C-w>o",                                                 desc = "Only Window" },
+    { "<leader>w=", "<C-w>=",                                                 desc = "Balance Windows" },
+    { "<leader>w<", "<C-w><",                                                 desc = "Decrease window width" },
+    { "<leader>w>", "<C-w>>",                                                 desc = "Increase window width" },
+    { "<leader>w-", "<C-w>-",                                                 desc = "Decrease window height" },
+    { "<leader>w+", "<C-w>+",                                                 desc = "Increase window height" },
+    -- Buffers (use <leader>b prefix to avoid conflicts with neotest)
+    { "<leader>b",  group = "Buffers" },
+    { "<leader>bn", "<cmd>bnext<CR>",                                         desc = "Next Buffer" },
+    { "<leader>bp", "<cmd>bprevious<CR>",                                     desc = "Prev Buffer" },
+    { "<leader>bo", "<cmd>enew<CR>",                                          desc = "New Buffer" },
+    { "<leader>bc", "<cmd>bdelete<CR>",                                       desc = "Close Buffer" },
+    {
+        "<leader>bv",
+        function()
+            if not prev_buf or prev_buf == vim.api.nvim_get_current_buf() then
+                vim.notify("No previous buffer", vim.log.levels.WARN)
+                return
+            end
+            vim.cmd("vsplit")
+            vim.cmd("buffer " .. prev_buf)
+        end,
+        desc = "Vertical split with previous buffer"
+    },
+    {
+        "<leader>bh",
+        function()
+            if not prev_buf or prev_buf == vim.api.nvim_get_current_buf() then
+                vim.notify("No previous buffer", vim.log.levels.WARN)
+                return
+            end
+            vim.cmd("split")
+            vim.cmd("buffer " .. prev_buf)
+        end,
+        desc = "Horizontal split with previous buffer"
+    },
+    -- Harpoon bookmarks
+    { "<leader>h",  group = "Harpoon" },
+    { "<leader>ha", function() require("harpoon"):list():add() end, desc = "Harpoon Add File" },
+    {
+        "<leader>hm",
+        function() require("harpoon").ui:toggle_quick_menu(require("harpoon"):list()) end,
+        desc = "Harpoon Menu"
+    },
+    { "<leader>h1", function() require("harpoon"):list():select(1) end, desc = "Harpoon Select 1" },
+    { "<leader>h2", function() require("harpoon"):list():select(2) end, desc = "Harpoon Select 2" },
+    { "<leader>h3", function() require("harpoon"):list():select(3) end, desc = "Harpoon Select 3" },
+    { "<leader>h4", function() require("harpoon"):list():select(4) end, desc = "Harpoon Select 4" },
     -- Tasks & Terminals
     { "<leader>x",  group = "Tasks/Term" },
-    { "<leader>xt", "<cmd>OverseerToggle<CR>",                                     desc = "Tasks Panel" },
-    { "<leader>xr", "<cmd>OverseerRun<CR>",                                        desc = "Run Task" },
-    { "<leader>xv", "<cmd>ToggleTerm<CR>",                                         desc = "Terminal" },
+    { "<leader>xt", "<cmd>OverseerToggle<CR>",                          desc = "Tasks Panel" },
+    { "<leader>xr", "<cmd>OverseerRun<CR>",                             desc = "Run Task" },
+    { "<leader>xv", "<cmd>ToggleTerm<CR>",                              desc = "Terminal" },
     -- Run group (code runner)
     { "<leader>r",  group = "Run" },
-    { "<leader>rr", ":RunCode<CR>",                                                desc = "Run Code" },
-    { "<leader>rf", ":RunFile<CR>",                                                desc = "Run File" },
-    { "<leader>rp", ":RunProject<CR>",                                             desc = "Run Project" },
-    { "<leader>rc", ":RunClose<CR>",                                               desc = "Close Runner" },
+    { "<leader>rr", ":RunCode<CR>",                                     desc = "Run Code" },
+    { "<leader>rf", ":RunFile<CR>",                                     desc = "Run File" },
+    { "<leader>rp", ":RunProject<CR>",                                  desc = "Run Project" },
+    { "<leader>rc", ":RunClose<CR>",                                    desc = "Close Runner" },
+    { "<leader>rd", "<cmd>Dotnet run<CR>",                              desc = "Dotnet Run Project" },
+    -- Refactoring helpers
+    {
+        "<leader>re",
+        function() require("refactoring").refactor("Extract Function") end,
+        desc = "Extract Function"
+    },
+    {
+        "<leader>ri",
+        function() require("refactoring").refactor("Inline Variable") end,
+        desc = "Inline Variable"
+    },
     -- Tests
     { "<leader>T",  group = "Tests" },
     { "<leader>tn", function() require("neotest").run.run() end,                   desc = "Run nearest test" },
@@ -894,9 +943,17 @@ wk.add({
         end,
         desc = "Copy Diagnostics"
     },
+    -- Persistence session shortcuts
+    { "<leader>p",  group = "Persistence" },
+    { "<leader>ps", "<cmd>lua require('persistence').load()<cr>",                desc = "Load Session" },
+    { "<leader>pl", "<cmd>lua require('persistence').load({ last = true })<cr>", desc = "Load Last Session" },
+    { "<leader>pd", "<cmd>lua require('persistence').stop()<cr>",                desc = "Stop Persistence" },
+    -- Notifications
+    { "<leader>n",  group = "Notifications" },
+    { "<leader>nn", "<cmd>Notifications<CR>",                                    desc = "Show Notifications" },
+    { "<leader>no", "<cmd>noh<CR>",                                              desc = "Hide Finds" },
     -- Misc
     { "s",          group = "Flash" },
-    { "<leader>sl", group = "LSP UI" },
     { "]d",         desc = "Next Diagnostic" },
     { "[d",         desc = "Prev Diagnostic" },
     { "za",         desc = "Toggle Fold" },
@@ -909,7 +966,8 @@ end, { desc = "Flash Jump" })
 -- lspsaga
 vim.keymap.set("n", "K", "<cmd>Lspsaga hover_doc<CR>", { desc = "Hover (Lspsaga)" })
 vim.keymap.set("n", "<leader>ca", "<cmd>Lspsaga code_action<CR>", { desc = "Code Action" })
-vim.keymap.set("n", "<leader>sd", "<cmd>Lspsaga show_line_diagnostics<CR>", { desc = "Line Diagnostics" })
+-- Map line diagnostics to <leader>sl instead of overriding <leader>sd
+vim.keymap.set("n", "<leader>sl", "<cmd>Lspsaga show_line_diagnostics<CR>", { desc = "Line Diagnostics" })
 vim.keymap.set("n", "<leader>sf", "<cmd>Lspsaga finder<CR>", { desc = "LSP Finder" })
 -- Dotnet running
 vim.keymap.set("n", "<leader>rd", "<cmd>Dotnet run<CR>", { desc = "Dotnet Run Project" })
@@ -938,6 +996,30 @@ vim.api.nvim_create_autocmd("FileType", {
         end
     end,
 })
-vim.keymap.set("n", "<leader>nn", "<cmd>Notifications<CR>", { desc = "Show Notifications"})
-vim.keymap.set("n", "<leader>no", "<cmd>noh<CR>", {desc = "Hide Finds"})
+vim.keymap.set("n", "<leader>nn", "<cmd>Notifications<CR>", { desc = "Show Notifications" })
+vim.keymap.set("n", "<leader>no", "<cmd>noh<CR>", { desc = "Hide Finds" })
+-----------------------------------------------------------
+-- Buffer-based splitting: choose a buffer to split with
+-----------------------------------------------------------
 
+-- Ask for a buffer number, then vertical split and load it
+vim.keymap.set("n", "<leader>bV", function()
+    local buf = tonumber(vim.fn.input("Buffer number: "))
+    if not buf or vim.fn.bufexists(buf) == 0 then
+        vim.notify("Invalid buffer", vim.log.levels.ERROR)
+        return
+    end
+    vim.cmd("vsplit")
+    vim.cmd("buffer " .. buf)
+end, { desc = "Vertical split with chosen buffer" })
+
+-- Ask for a buffer number, then horizontal split and load it
+vim.keymap.set("n", "<leader>bH", function()
+    local buf = tonumber(vim.fn.input("Buffer number: "))
+    if not buf or vim.fn.bufexists(buf) == 0 then
+        vim.notify("Invalid buffer", vim.log.levels.ERROR)
+        return
+    end
+    vim.cmd("split")
+    vim.cmd("buffer " .. buf)
+end, { desc = "Horizontal split with chosen buffer" })
