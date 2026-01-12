@@ -207,7 +207,7 @@ require("lazy").setup({
                     component_separators = "",
                     section_separators = { right = "", left = "" },
                     icons_enabled = true,
-                    theme = "catppuccin",
+                    theme = "auto",
                 },
             }
         end,
